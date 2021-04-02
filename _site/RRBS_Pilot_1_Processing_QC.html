@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Annat Haber" />
+
+<meta name="date" content="2021-03-25" />
+
+<title>RRBS Pilot Processing and QC</title>
+
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cerulean.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-5.1.0/css/v4-shims.css" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.tab('show');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-sm-12 col-md-4 col-lg-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-sm-12 col-md-8 col-lg-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">MTHFR C667T epigenetics</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    RRBS Pilot
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="RRBS_Pilot_0_Sample_Metadata.html">Sample Metadata</a>
+    </li>
+    <li>
+      <a href="RRBS_Pilot_1_Processing_QC.html">Processing and QC</a>
+    </li>
+    <li>
+      <a href="RRBS_Pilot_2_Exploratory_Analysis.html">Exploratory Analysis</a>
+    </li>
+    <li>
+      <a href="RRBS_Pilot_3_Differential_Methylation.html">Differential Methylation</a>
+    </li>
+    <li class="dropdown-header">Methylation by Position</li>
+  </ul>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    RRBS
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="RRBS_0_Sample_Metadata.html">Sample Metadata</a>
+    </li>
+    <li>
+      <a href="RRBS_1_Processing_QC.html">Processing and QC</a>
+    </li>
+    <li>
+      <a href="RRBS_2_Exploratory_Analysis.html">Exploratory Analysis</a>
+    </li>
+    <li class="dropdown-header">Differential Methylation</li>
+    <li class="dropdown-header">Methylation by Position</li>
+  </ul>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    RNAseq
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="RNAseq_0_Sample_Metadata.html">Sample Metadata</a>
+    </li>
+    <li>
+      <a href="RNAseq_1_Processing_QC.html">Processing and QC</a>
+    </li>
+    <li class="dropdown-header">Exploratory Analysis</li>
+  </ul>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/TheJacksonLaboratory/MTHFR_C667T">
+    <span class="fab fa-github"></span>
+     
+  </a>
+</li>
+<li>
+  <a href="mailto:&lt;annat.haber@jax.org&gt;">
+    <span class="fas fa-paper-plane"></span>
+     
+  </a>
+</li>
+<li>
+  <a href="https://www.dropbox.com/home/MTHFR">
+    <span class="fab fa-dropbox"></span>
+     
+  </a>
+</li>
+<li>
+  <a href="https://www.synapse.org/#!Synapse:syn23573590/wiki/607402">
+    <span class="fas fa-project-diagram"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore">RRBS Pilot Processing and QC</h1>
+<h4 class="author">Annat Haber</h4>
+<h4 class="date">2021-03-25</h4>
+
+</div>
+
+
+<pre class="r"><code>knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(cache=TRUE, cache.extra = R.version, 
+                      #cache.path = &quot;output/RRBS_Pilot/2_Exploratory_Analysis/&quot;,
+                      message=FALSE, warning=FALSE)</code></pre>
+<pre class="r"><code>suppressPackageStartupMessages({
+  library(methylKit)
+  library(tidyverse)
+  library(synapser)
+})</code></pre>
+<pre class="r"><code>meta &lt;- readRDS(&quot;output/RRBS_Pilot/sample_meta.RDS&quot;) %&gt;% arrange(genotype,sex, age)</code></pre>
+<div id="preparing-input-files" class="section level2">
+<h2>Preparing input files</h2>
+<p>Creating symbolic links to the original fastq files.<br />
+Files are renamed as <code>&lt;sample_id&gt;.fastq.gz</code>.</p>
+<pre class="r"><code># original files to link to
+origfiles &lt;- list.files(&quot;/projects/howell-lab/00_fastq/reagaa/RRBS/20190820_19-howell-005-run4&quot;,
+                        pattern=&quot;*.fastq.gz&quot;, full.names = TRUE)
+
+for (id in meta$sample_id) {
+  flink &lt;- paste0(&quot;./data/RRBS_Pilot/&quot;, id, &quot;_R1.fastq.gz&quot;) # link name
+  ofile &lt;- grep(id, origfiles, value=TRUE) # original file and path
+  file.symlink(ofile, flink)
+}</code></pre>
+</div>
+<div id="processing-fastq-files" class="section level2">
+<h2>Processing fastq Files</h2>
+<p>The fastq files are processed using the <a href="https://github.com/nf-core/methylseq">nextflow-core methylseq pipeline</a>, and submitted to sumner with <a href="assets/RRBS_Pilot_run_nf_methylseq.sbatch">this script</a>.<br />
+Reads were aligned to GRCm38 reference genome as a directional library.</p>
+<pre class="bash"><code>cd /projects/carter-lab/MTHFR/output/RRBS_Pilot/1_Processing_QC
+sbatch run_nf_methylseq.sbatch
+cp run_nf_methylseq.sbatch /projects/carter-lab/MTHFR/assets/RRBS_Pilot_run_nf_methylseq.sbatch</code></pre>
+</div>
+<div id="qc-processing-pipeline" class="section level2">
+<h2>QC: Processing Pipeline</h2>
+<p>Summary reports generated by the pipeline:</p>
+<pre class="r"><code>file.copy(from = &quot;output/RRBS_Pilot/1_Processing_QC/nf_methylseq_output/pipeline_info/results_description.html&quot;, 
+          to = &quot;./assets/RRBS_Pilot_results_description.html&quot;, 
+          overwrite = TRUE, recursive = FALSE, copy.mode = TRUE, copy.date = TRUE)
+file.copy(from = &quot;output/RRBS_Pilot/1_Processing_QC/nf_methylseq_output/MultiQC/multiqc_report.html&quot;, 
+          to = &quot;./assets/RRBS_Pilot_multiqc_report.html&quot;, 
+          overwrite = TRUE, recursive = FALSE, copy.mode = TRUE, copy.date = TRUE)</code></pre>
+<ol style="list-style-type: decimal">
+<li><a href="assets/RRBS_Pilot_results_description.html">Overview of pipeline and output</a><br />
+</li>
+<li><a href="assets/RRBS_Pilot_multiqc_report.html">QC report for all steps</a></li>
+</ol>
+</div>
+<div id="generating-methylation-objects" class="section level2">
+<h2>Generating methylation objects</h2>
+<p>Methylation calls are extracted from the coverage files generated by bismark.</p>
+<pre class="r"><code>covfiles &lt;- list.files(&quot;output/RRBS_Pilot/1_Processing_QC/nf_methylseq_output/bismark_methylation_calls/methylation_coverage&quot;, full.names = TRUE)
+names(covfiles) &lt;- gsub(&quot;(\\d+)_R1_trimmed_bismark_bt2.bismark.cov.gz&quot;, &quot;\\1&quot;, basename(covfiles))
+covfiles &lt;- as.list(covfiles[meta$sample_id])</code></pre>
+<p>Sites with less than 10x read coverage are filtered out.<br />
+Only sites within CpG context that are covered in all samples are retained for subsequent analyses.</p>
+<pre class="r"><code>library(tidyverse)
+library(methylKit)
+
+raw_meth &lt;- methRead(covfiles,
+           sample.id=as.list(names(covfiles)),
+           assembly=&quot;mm10.p6&quot;,
+           treatment=meta$treatment,
+           context=&quot;CpG&quot;,
+           pipeline=&#39;bismarkCoverage&#39;,
+           mincov = 10
+           ) %&gt;%
+  filterByCoverage(lo.count=10, lo.perc=NULL, hi.count=NULL, hi.perc=99.9)</code></pre>
+<pre class="r"><code>united_meth &lt;-  methylKit::unite(raw_meth, destrand=FALSE)</code></pre>
+</div>
+<div id="qc-methylation-distribution-and-read-coverage" class="section level2 tabset tabset-fade tabset-pills">
+<h2>QC: Methylation distribution and read coverage</h2>
+<p>Distributions are largely the same for all samples.<br />
+The vast majority of sites have either 0% or 100% methylation, which is what we want.<br />
+Coverage is highly right-skewed, which tells us that we don’t need to worry about PCR duplication bias. A bias would have been indicated as an additional peak on the right.</p>
+<pre class="r"><code>for(i in 1:nrow(meta)){
+  cat(&quot;### &quot;, paste(meta$sample_id[i], meta$genotype[i], meta$sex[i], meta$age[i], sep=&quot;_&quot;),&quot;\n&quot;)
+  cat(getMethylationStats(raw_meth[[i]], plot=TRUE, both.strands=FALSE))
+  cat(getCoverageStats(raw_meth[[i]], plot=TRUE, both.strands=FALSE))
+  cat(&#39;\n\n&#39;)
+}</code></pre>
+<div id="cc_f_13" class="section level3">
+<h3>33140_CC_F_13</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-1.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-2.png" width="50%" /></p>
+</div>
+<div id="cc_f_13-1" class="section level3">
+<h3>34036_CC_F_13</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-3.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-4.png" width="50%" /></p>
+</div>
+<div id="cc_f_13-2" class="section level3">
+<h3>35300_CC_F_13</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-5.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-6.png" width="50%" /></p>
+</div>
+<div id="cc_f_4" class="section level3">
+<h3>43763_CC_F_4</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-7.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-8.png" width="50%" /></p>
+</div>
+<div id="cc_f_4-1" class="section level3">
+<h3>43764_CC_F_4</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-9.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-10.png" width="50%" /></p>
+</div>
+<div id="cc_f_4-2" class="section level3">
+<h3>43765_CC_F_4</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-11.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-12.png" width="50%" /></p>
+</div>
+<div id="cc_f_4-3" class="section level3">
+<h3>44292_CC_F_4</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-13.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-14.png" width="50%" /></p>
+</div>
+<div id="ct_f_13" class="section level3">
+<h3>33139_CT_F_13</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-15.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-16.png" width="50%" /></p>
+</div>
+<div id="ct_f_13-1" class="section level3">
+<h3>33174_CT_F_13</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-17.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-18.png" width="50%" /></p>
+</div>
+<div id="ct_f_13-2" class="section level3">
+<h3>33193_CT_F_13</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-19.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-20.png" width="50%" /></p>
+</div>
+<div id="ct_f_13-3" class="section level3">
+<h3>34035_CT_F_13</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-21.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-22.png" width="50%" /></p>
+</div>
+<div id="ct_f_4" class="section level3">
+<h3>43768_CT_F_4</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-23.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-24.png" width="50%" /></p>
+</div>
+<div id="ct_f_4-1" class="section level3">
+<h3>44275_CT_F_4</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-25.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-26.png" width="50%" /></p>
+</div>
+<div id="ct_f_4-2" class="section level3">
+<h3>44276_CT_F_4</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-27.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-28.png" width="50%" /></p>
+</div>
+<div id="ct_f_4-3" class="section level3">
+<h3>44277_CT_F_4</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-29.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-30.png" width="50%" /></p>
+</div>
+<div id="tt_f_13" class="section level3">
+<h3>33178_TT_F_13</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-31.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-32.png" width="50%" /></p>
+</div>
+<div id="tt_f_13-1" class="section level3">
+<h3>34004_TT_F_13</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-33.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-34.png" width="50%" /></p>
+</div>
+<div id="tt_f_13-2" class="section level3">
+<h3>34014_TT_F_13</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-35.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-36.png" width="50%" /></p>
+</div>
+<div id="tt_f_13-3" class="section level3">
+<h3>34027_TT_F_13</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-37.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-38.png" width="50%" /></p>
+</div>
+<div id="tt_f_4" class="section level3">
+<h3>38424_TT_F_4</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-39.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-40.png" width="50%" /></p>
+</div>
+<div id="tt_f_4-1" class="section level3">
+<h3>38425_TT_F_4</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-41.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-42.png" width="50%" /></p>
+</div>
+<div id="tt_f_4-2" class="section level3">
+<h3>38444_TT_F_4</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-43.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-44.png" width="50%" /></p>
+</div>
+<div id="tt_f_4-3" class="section level3">
+<h3>44278_TT_F_4</h3>
+<p><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-45.png" width="50%" /><img src="RRBS_Pilot_1_Processing_QC_files/figure-html/qc-46.png" width="50%" /></p>
+<pre class="r"><code>rm(raw_meth)</code></pre>
+</div>
+</div>
+<div id="output" class="section level2">
+<h2>Output</h2>
+<p>Calculating percent methylation per site per sample (samples x sites matrix).</p>
+<pre class="r"><code>site_meth &lt;- t(percMethylation(united_meth))
+# Adding positions as column names:
+colnames(site_meth) &lt;- paste(united_meth$chr, united_meth$start, sep=&quot;_&quot;)</code></pre>
+<p>Saving methylation objects as RDS for subsequent analyses.</p>
+<pre class="r"><code>saveRDS(united_meth, file=&quot;output/RRBS_Pilot/1_Processing_QC/united_meth.RDS&quot;)
+saveRDS(site_meth, file=&quot;output/RRBS_Pilot/1_Processing_QC/persite_meth.RDS&quot;)
+write_csv(data.frame(site_meth), file=&quot;output/RRBS_Pilot/1_Processing_QC/RRBS_Pilot_persite_meth.csv&quot;)</code></pre>
+<p>Uploading percent methylation per site to <a href="https://www.synapse.org/#!Synapse:syn23573590/wiki/607402">Synapse</a> as csv file.</p>
+<pre class="r"><code>synLogin() 
+
+file &lt;- File(&quot;output/RRBS_Pilot/1_Processing_QC/RRBS_Pilot_persite_meth.csv&quot;,
+             contentType = &quot;text/plain&quot;,
+             description = &quot;RRBS_Pilot Percent methylation per site per sample&quot;,
+             parent = &quot;syn25174488&quot;)
+provenance &lt;- Activity(used = &quot;syn25175205&quot;,
+                       executed = &quot;https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RRBS_Pilot_1_Processing_QC.Rmd&quot;)
+file &lt;- synStore(file, activity=provenance)</code></pre>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("hide" === "show");
+});
+</script>
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

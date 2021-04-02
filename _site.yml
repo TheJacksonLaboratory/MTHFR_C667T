@@ -1,0 +1,59 @@
+name: "MTHFR_C667T_epigenetics"
+new_session: true
+exclude: ["renv.lock", "data", "docs", "output", "rsconnect", "doc", "*_cache"]
+output_dir: "./_site"
+navbar:
+  title: "MTHFR C667T epigenetics"
+  left:
+    - text: "RRBS Pilot"
+      menu:
+      - text: "Sample Metadata"
+        href: RRBS_Pilot_0_Sample_Metadata.html
+      - text: "Processing and QC"
+        href: RRBS_Pilot_1_Processing_QC.html
+      - text: "Exploratory Analysis"
+        href: RRBS_Pilot_2_Exploratory_Analysis.html
+      - text: "Differential Methylation"
+        href: RRBS_Pilot_3_Differential_Methylation.html
+      - text: "Methylation by Position"
+        #href: RRBS_Pilot_4_Methylation_Position.html
+    - text: "RRBS"
+      menu:
+      - text: "Sample Metadata"
+        href: RRBS_0_Sample_Metadata.html
+      - text: "Processing and QC"
+        href: RRBS_1_Processing_QC.html
+      - text: "Exploratory Analysis"
+        href: RRBS_2_Exploratory_Analysis.html
+      - text: "Differential Methylation"
+        #href: RRBS_3_Differential_Methylation.html
+      - text: "Methylation by Position"
+        #href: RRBS_4_Methylation_Position.html
+    - text: "RNAseq"
+      menu:
+      - text: "Sample Metadata"
+        href: RNAseq_0_Sample_Metadata.html
+      - text: "Processing and QC"
+        href: RNAseq_1_Processing_QC.html
+      - text: "Exploratory Analysis"
+        #href: RNAseq_2_Exploratory_Analysis.html
+  right:
+    - icon: fab fa-github
+      href: https://github.com/TheJacksonLaboratory/MTHFR_C667T
+    - icon: fas fa-paper-plane
+      href: mailto:<annat.haber@jax.org>
+    - icon: fab fa-dropbox
+      href: https://www.dropbox.com/home/MTHFR
+    - icon: fas fa-project-diagram
+      href: https://www.synapse.org/#!Synapse:syn23573590/wiki/607402
+
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    theme: cerulean
+    highlight: textmate
+    #keep_md: true
+
+
+

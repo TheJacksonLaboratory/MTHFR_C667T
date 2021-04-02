@@ -1,0 +1,56 @@
+---
+title: "RRBS Pilot Sample Metadata"
+author: "Annat Haber"
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    toc: true
+    code_folding: hide
+    df_print: "kable"
+---
+
+```{r setup, warning=FALSE, message=FALSE}
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = FALSE)
+```
+
+```{r libraries}
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(synapser)
+})
+```
+
+Sample size included in the RRBS Pilot analysis by age and genotype.  
+All samples are female.
+```{r metadata}
+meta <- read_csv("data/RRBS_Pilot/RRBS_Pilot_sample_metadata.csv", 
+                 col_types = cols(.default = "c")) %>%
+  mutate(group = paste(genotype, age, sep="_")) %>%
+  arrange(sample_id)
+
+# add treatment vector for methylKit operations
+meta <- left_join(meta,
+              data.frame(treatment=0:5, group=unique(meta$group)),
+              by="group")
+
+meta %>% 
+  group_by(age, genotype) %>%
+  summarise(n=n())
+
+```
+
+```{r output, results='hide'}
+saveRDS(meta, file="output/RRBS_Pilot/sample_meta.RDS")
+write_csv(meta, file="output/RRBS_Pilot/RRBS_Pilot_sample_meta.csv")
+
+synLogin() 
+
+file <- File("output/RRBS_Pilot/RRBS_Pilot_sample_meta.csv",
+             contentType = "text/plain",
+             description = "RRBS_Pilot sample metadata",
+             parent = "syn25174488")
+provenance <- Activity(executed = "https://github.com/TheJacksonLaboratory/MTHFR_C667T")
+file <- synStore(file, activity=provenance)
+```
+```
