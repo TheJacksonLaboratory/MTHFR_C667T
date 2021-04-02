@@ -11,7 +11,7 @@
 
 <meta name="author" content="Annat Haber" />
 
-<meta name="date" content="2021-03-25" />
+<meta name="date" content="2021-04-02" />
 
 <title>RRBS Pilot Differential Methylation Annotation</title>
 
@@ -427,13 +427,15 @@ div.tocify {
 
 <h1 class="title toc-ignore">RRBS Pilot Differential Methylation Annotation</h1>
 <h4 class="author">Annat Haber</h4>
-<h4 class="date">2021-03-25</h4>
+<h4 class="date">2021-04-02</h4>
 
 </div>
 
 
 <pre class="r"><code>knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
-knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = FALSE, cache.path = &quot;output/RRBS_Pilot/3_Differential_Methylation&quot;, eval=FALSE)</code></pre>
+knitr::opts_chunk$set(cache = TRUE, 
+                      #cache.path = &quot;output/RRBS_Pilot/3_Differential_Methylation&quot;,
+                      message=FALSE, warning=FALSE)</code></pre>
 <pre class="r"><code>rm(list=ls())
 
 suppressPackageStartupMessages({
@@ -446,12 +448,59 @@ suppressPackageStartupMessages({
   library(clusterProfiler)
   library(GOsummaries)
   library(org.Mm.eg.db)
-})
+})</code></pre>
+<div id="input" class="section level2">
+<h2>Input</h2>
+<pre class="r"><code>united_meth &lt;- readRDS(file=&quot;output/RRBS_Pilot/1_Processing_QC/united_meth.RDS&quot;)
+meta &lt;- read_csv(file=&quot;output/RRBS_Pilot/2_Exploratory_Analysis/RRBS_Pilot_meta_globalmeth.csv&quot;,
+                 col_types = cols(.default = &quot;c&quot;))</code></pre>
+</div>
+<div id="differential-methyation" class="section level2 tabset tabset-fade tabset-pills">
+<h2>Differential methyation</h2>
+<p>Using age as covariate</p>
+<div id="tt-vs-cc" class="section level3">
+<h3>TT vs CC</h3>
+<pre class="r"><code>mm &lt;- united_meth
+cov &lt;- meta %&gt;%
+  filter(genotype!=&quot;CT&quot;) %&gt;%
+  mutate(genotype = ifelse(genotype==&quot;TT&quot;, 1, 0))
+  
+diffM_TT &lt;- reorganize(mm, 
+                       sample.ids = cov$sample_id, 
+                       treatment= cov$genotype) %&gt;%
+            calculateDiffMeth(covariates = as.data.frame(cov$age))
 
-diffM &lt;- readRDS(&quot;output/2_Analysis/diffM.TT.RDS&quot;)</code></pre>
-<div id="gene-parts-annotation" class="section level2">
+rm(mm, cov)</code></pre>
+<pre class="r"><code>diffMethPerChr(diffM_TT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=10)</code></pre>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/diffM_TT_plot-1.png" width="672" /></p>
+<pre class="r"><code>diffMethPerChr(diffM_TT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)</code></pre>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/diffM_TT_plot-2.png" width="672" /></p>
+</div>
+<div id="ct-vs-cc" class="section level3">
+<h3>CT vs CC</h3>
+<pre class="r"><code>mm &lt;- united_meth
+cov &lt;- meta %&gt;%
+  filter(genotype!=&quot;TT&quot;) %&gt;%
+  mutate(genotype = ifelse(genotype==&quot;CT&quot;, 1, 0))
+  
+diffM_CT &lt;- reorganize(mm, 
+                       sample.ids = cov$sample_id, 
+                       treatment= cov$genotype) %&gt;%
+            calculateDiffMeth(covariates = as.data.frame(cov$age))</code></pre>
+<pre class="r"><code>diffMethPerChr(diffM_CT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=10)</code></pre>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/diffM_CT_plot-1.png" width="672" /></p>
+<pre class="r"><code>diffMethPerChr(diffM_CT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)</code></pre>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/diffM_CT_plot-2.png" width="672" /></p>
+</div>
+</div>
+<div id="gene-parts-annotation" class="section level2 tabset tabset-fade tabset-pills">
 <h2>Gene parts annotation</h2>
-<pre class="r"><code># Get hypermethylated sites with difference &gt; 10% and convert to GRanges
+<p>Gene parts for site that are &gt; 10% deferentially methylated</p>
+<div id="tt-vs-cc-1" class="section level3">
+<h3>TT vs CC</h3>
+<pre class="r"><code>diffM &lt;- diffM_TT
+
+# Get hypermethylated sites with difference &gt; 10% and convert to GRanges
 diffM10.hyper &lt;- getMethylDiff(diffM, difference=10, qvalue=0.01, type=&quot;hyper&quot;) %&gt;%
   as(&quot;GRanges&quot;)
 
@@ -461,150 +510,90 @@ diffM10.hypo &lt;- getMethylDiff(diffM, difference=10, qvalue=0.01, type=&quot;h
 
 
 # Get gene parts annotation
-gene.obj=readTranscriptFeatures(&quot;data/mm10.refseq.genes.bed0.txt&quot;)
+gene.obj=readTranscriptFeatures(&quot;data/mm10.refseq.genes.bed&quot;)
 
 hypo10.ann &lt;- annotateWithGeneParts(diffM10.hypo,  gene.obj)
-plotTargetAnnotation(hypo10.ann, precedence=TRUE,
-    main=&quot;Hypo-methylated gene parts; &gt; 10% diff.&quot;)
 
 hyper10.ann &lt;- annotateWithGeneParts(diffM10.hyper, gene.obj)
-plotTargetAnnotation(hyper10.ann, precedence=TRUE,
-    main=&quot;Hyper-methylated gene parts; &gt; 10% diff.&quot;)
 
 # Get flank annotation
-cpg.obj=readFeatureFlank(&quot;data/mm10.refseq.genes.bed0.txt&quot;,
+cpg.obj=readFeatureFlank(&quot;data/mm10.refseq.genes.bed&quot;,
                            feature.flank.name=c(&quot;CpGi&quot;,&quot;shores&quot;))
 
 diffCpGann.hypo10 &lt;- annotateWithFeatureFlank(diffM10.hypo,
                                     cpg.obj$CpGi,cpg.obj$shores,
                          feature.name=&quot;CpGi&quot;,flank.name=&quot;shores&quot;)
-plotTargetAnnotation(diffCpGann.hypo10,col=c(&quot;green&quot;,&quot;gray&quot;,&quot;white&quot;),
-       main=&quot;Hypo-methylated flank annotation; &gt; 10% diff.&quot;)
-
 
 diffCpGann.hyper10 &lt;- annotateWithFeatureFlank(diffM10.hyper,
                                     cpg.obj$CpGi,cpg.obj$shores,
                          feature.name=&quot;CpGi&quot;,flank.name=&quot;shores&quot;)
+rm(diffM)</code></pre>
+<pre class="r"><code>plotTargetAnnotation(hypo10.ann, precedence=TRUE,
+    main=&quot;Hypo-methylated gene parts; &gt; 10% diff.&quot;)
+
+plotTargetAnnotation(hyper10.ann, precedence=TRUE,
+    main=&quot;Hyper-methylated gene parts; &gt; 10% diff.&quot;)
+
+
+plotTargetAnnotation(diffCpGann.hypo10,col=c(&quot;green&quot;,&quot;gray&quot;,&quot;white&quot;),
+       main=&quot;Hypo-methylated flank annotation; &gt; 10% diff.&quot;)
+
 plotTargetAnnotation(diffCpGann.hyper10,col=c(&quot;green&quot;,&quot;gray&quot;,&quot;white&quot;),
        main=&quot;Hyper-methylated flank annotation; &gt; 10% diff.&quot;)</code></pre>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/gene_parts_plots_TT-1.png" width="50%" /><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/gene_parts_plots_TT-2.png" width="50%" /><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/gene_parts_plots_TT-3.png" width="50%" /><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/gene_parts_plots_TT-4.png" width="50%" /></p>
 </div>
-<div id="map-snps-to-known-genes" class="section level2">
-<h2>Map snp’s to known genes</h2>
-<p>Using MGI names</p>
-<pre class="r"><code>snpDM &lt;- getMethylDiff(diffM, difference = 0, qvalue=0.01, type=&quot;all&quot;) 
-chr &lt;- substr(snpDM@.Data[[1]], 4, 5)
-snpDM@.Data[[1]] &lt;- chr
-snp.gr &lt;- as(snpDM, &quot;GRanges&quot;)
-names(snp.gr) &lt;- paste(chr, snpDM@.Data[[2]], sep=&quot;:&quot;)
+<div id="ct-vs-cc-1" class="section level3">
+<h3>CT vs CC</h3>
+<pre class="r"><code>diffM &lt;- diffM_CT
 
-# downloaded reference annotation directly from http://genome.ucsc.edu/cgi-bin/hgTables
-# removed X and Y chromosomes
-refseq &lt;- read_tsv(&quot;data/mm10.refseq.genes.txt&quot;) 
-chr &lt;- substr(refseq$chrom, 4,5)
-ref.gr &lt;- GRanges(
-        seqnames = chr,
-        ranges=IRanges(start = refseq$txStart, end = refseq$txEnd),
-        mgi_name=refseq$name2
-        )
-names(ref.gr) &lt;- refseq$name
+# Get hypermethylated sites with difference &gt; 10% and convert to GRanges
+diffM10.hyper &lt;- getMethylDiff(diffM, difference=10, qvalue=0.01, type=&quot;hyper&quot;) %&gt;%
+  as(&quot;GRanges&quot;)
 
-overlap &lt;- findOverlaps(snp.gr, ref.gr)
-hits &lt;- ref.gr$mgi_name[slot(overlap, &quot;to&quot;)]
-names(hits) &lt;- names(snp.gr)[slot(overlap, &quot;from&quot;)]
-hits &lt;- hits[!duplicated(hits)]
-snpDMgenes &lt;- snp.gr[names(hits),]
-mcols(snpDMgenes)$mgi_name &lt;- hits
+# Get hypomethylated sites with difference &gt; 10% and convert to GRanges
+diffM10.hypo &lt;- getMethylDiff(diffM, difference=10, qvalue=0.01, type=&quot;hypo&quot;) %&gt;%
+  as(&quot;GRanges&quot;)
 
-write.table(data.frame(snpDMgenes), file = &quot;output/3_Annotation/snpDMgenes.csv&quot;, sep=&quot;,&quot;, col.names=TRUE, row.names=FALSE, quote=FALSE)
 
-#### Extract significant genes and convert to entrez id
-sig.gs &lt;- list(&quot;hypo&quot;=
-                 (data.frame(snpDMgenes) %&gt;%
-                    filter(qvalue &lt; 0.01 &amp; meth.diff &lt; -10) %&gt;%
-                    arrange(meth.diff)), 
-               &quot;hyper&quot;=
-                 (data.frame(snpDMgenes) %&gt;%
-                    filter(qvalue &lt; 0.01 &amp; meth.diff &gt; 10) %&gt;%
-                    arrange(-meth.diff)))
-  
-# get entrez id
-sig.gs.ez &lt;- list()
-for (gs in names(sig.gs)) {
-  sig.gs.ez[[gs]] &lt;- bitr(sig.gs[[gs]]$mgi_name, fromType=&quot;SYMBOL&quot;, toType=&quot;ENTREZID&quot;, OrgDb=&quot;org.Mm.eg.db&quot;)$ENTREZID
-}</code></pre>
+# Get gene parts annotation
+gene.obj=readTranscriptFeatures(&quot;data/mm10.refseq.genes.bed&quot;)
+
+hypo10.ann &lt;- annotateWithGeneParts(diffM10.hypo,  gene.obj)
+
+hyper10.ann &lt;- annotateWithGeneParts(diffM10.hyper, gene.obj)
+
+# Get flank annotation
+cpg.obj=readFeatureFlank(&quot;data/mm10.refseq.genes.bed&quot;,
+                           feature.flank.name=c(&quot;CpGi&quot;,&quot;shores&quot;))
+
+diffCpGann.hypo10 &lt;- annotateWithFeatureFlank(diffM10.hypo,
+                                    cpg.obj$CpGi,cpg.obj$shores,
+                         feature.name=&quot;CpGi&quot;,flank.name=&quot;shores&quot;)
+
+diffCpGann.hyper10 &lt;- annotateWithFeatureFlank(diffM10.hyper,
+                                    cpg.obj$CpGi,cpg.obj$shores,
+                         feature.name=&quot;CpGi&quot;,flank.name=&quot;shores&quot;)
+rm(diffM)</code></pre>
+<pre class="r"><code>plotTargetAnnotation(hypo10.ann, precedence=TRUE,
+    main=&quot;Hypo-methylated gene parts; &gt; 10% diff.&quot;)
+
+plotTargetAnnotation(hyper10.ann, precedence=TRUE,
+    main=&quot;Hyper-methylated gene parts; &gt; 10% diff.&quot;)
+
+
+plotTargetAnnotation(diffCpGann.hypo10,col=c(&quot;green&quot;,&quot;gray&quot;,&quot;white&quot;),
+       main=&quot;Hypo-methylated flank annotation; &gt; 10% diff.&quot;)
+
+plotTargetAnnotation(diffCpGann.hyper10,col=c(&quot;green&quot;,&quot;gray&quot;,&quot;white&quot;),
+       main=&quot;Hyper-methylated flank annotation; &gt; 10% diff.&quot;)</code></pre>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/gene_parts_plots_CT-1.png" width="50%" /><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/gene_parts_plots_CT-2.png" width="50%" /><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/gene_parts_plots_CT-3.png" width="50%" /><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/gene_parts_plots_CT-4.png" width="50%" /></p>
 </div>
-<div id="annotate-mapped-genes" class="section level2">
-<h2>Annotate mapped genes</h2>
-<div id="kegg-annotation" class="section level3">
-<h3>KEGG annotation</h3>
-<pre class="r"><code>#library(enrichplot)
-### KEGG
-kegg_anno &lt;- list()
-for (gs in names(sig.gs.ez)) {
-  cat(&quot;\n Annotating:&quot;, gs,&quot;-methylated genes\n&quot;)
-  
-  anno &lt;- enrichKEGG(gene = sig.gs.ez[[gs]],
-                organism = &quot;mmu&quot;,
-                keyType = &quot;ncbi-geneid&quot;,
-                pvalueCutoff = 0.5,
-                pAdjustMethod = &quot;BH&quot;,
-                minGSSize = 10,
-                maxGSSize = 500,
-                qvalueCutoff = 0.5,
-                use_internal_data = FALSE)
-  
-  print(barplot(anno, showCategory=20, title=paste0(&quot;KEGG pathways for &quot;, gs, &quot;-methylated sites; &gt;10%&quot;)))
-  anno &lt;- setReadable(anno, OrgDb = org.Mm.eg.db, keyType=&quot;ENTREZID&quot;)
-  anno &lt;- as.data.frame(anno@result)
-  write_csv(anno, path=paste0(&quot;output/3_Annotation/kegg_anno_&quot;, gs, &quot;.csv&quot;))
-
-  kegg_anno[[gs]] &lt;- anno
-
-}
-
-saveRDS(kegg_anno, file=&quot;output/3_Annotation/kegg_anno.RDS&quot;)</code></pre>
 </div>
-<div id="go-annotation" class="section level3">
-<h3>GO annotation</h3>
-<p>Doesn’t work; not enough enriched terms</p>
-<pre class="r"><code>goBP_anno &lt;- list()
-for (gs in names(sig.gs.ez)) {
-  cat(&quot;\n Annotating:&quot;, gs,&quot;-methylated genes\n&quot;)
-  
-  go_anno &lt;- enrichGO(gene = sig.gs.ez[[gs]],
-                OrgDb         = &quot;org.Mm.eg.db&quot;,
-                keyType       = &#39;ENTREZID&#39;,
-                ont           = &quot;BP&quot;,  # Biological processes
-                pAdjustMethod = &quot;bonferroni&quot;,
-                pvalueCutoff  = 0.01,
-                qvalueCutoff  = 0.05,
-                readable=TRUE)
-  
-  go_anno &lt;- as.data.frame(go_anno@result)
-  colnames(go_anno)[1] &lt;- &quot;GO.ID&quot;
-  colnames(go_anno)[8] &lt;- &quot;mgi_name&quot;
-
-  goBP_anno[[gs]] &lt;- go_anno
-
-}
-
-saveRDS(goBP_anno, file=&quot;output/3_Annotation/goBP_anno.RDS&quot;)
-
-
-## GOsummaries and cloud plots
-library(GOsummaries)
-
-gosum &lt;- list()
-for (gs in names(goBP_anno)) {
-  gosum[[gs]] &lt;- gosummaries(goBP_anno[[gs]]$mgi_name, ordered_query=FALSE, max_p_value = 0.5) %&gt;%
-    add_to_slot.gosummaries(&quot;Title&quot;, list(paste0(gs,&quot;-methylated; &gt;10%&quot;)))
-}
-
-for (gs in names(gosum)) {
-  plot.gosummaries(gosum[[gs]],filename=paste0(&quot;output/3_Annotation/GOcloud_&quot;,gs,&quot;.pdf&quot;))
-}
-###################</code></pre>
-</div>
+<div id="output" class="section level2">
+<h2>Output</h2>
+<p>Saving differential methylation objects as RDS for subsequent analyses.</p>
+<pre class="r"><code>saveRDS(diffM_TT, file=&quot;output/RRBS_Pilot/3_Differential_Methylation/diffM_TT.RDS&quot;)
+saveRDS(diffM_CT, file=&quot;output/RRBS_Pilot/3_Differential_Methylation/diffM_CT.RDS&quot;)</code></pre>
 </div>
 
 
