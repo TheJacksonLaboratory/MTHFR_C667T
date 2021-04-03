@@ -1,0 +1,193 @@
+---
+title: "RRBS Differential Methylation Annotation"
+author: "Annat Haber"
+date: '`r Sys.Date()`'
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    code_folding: hide
+---
+
+```{r setup, warning=FALSE, message=FALSE}
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(cache = TRUE, 
+                      #cache.path = "output/RRBS/3_Differential_Methylation",
+                      message=FALSE, warning=FALSE)
+```
+
+```{r libraries}
+rm(list=ls())
+
+suppressPackageStartupMessages({
+  library(methylKit)
+  library(tidyverse)
+
+  library(GenomicRanges)
+  library(genomation)
+  library(ChIPpeakAnno)
+  library(clusterProfiler)
+  library(GOsummaries)
+  library(org.Mm.eg.db)
+})
+
+```
+
+## Input
+```{r input}
+united_meth <- readRDS(file="output/RRBS/1_Processing_QC/united_meth.RDS")
+meta <- read_csv(file="output/RRBS/2_Exploratory_Analysis/RRBS_meta_globalmeth.csv",
+                 col_types = cols(.default = "c"))
+```
+
+## Differential methyation {.tabset .tabset-fade .tabset-pills}
+Using age and sex as covariate
+
+### TT vs CC 
+```{r diffM_TT}
+mm <- united_meth
+cov <- meta %>%
+  filter(genotype!="CT") %>%
+  mutate(genotype = ifelse(genotype=="TT", 1, 0))
+  
+diffM_TT <- reorganize(mm, 
+                       sample.ids = cov$sample_id, 
+                       treatment= cov$genotype) %>%
+            calculateDiffMeth(covariates = dplyr::select(cov, age, sex))
+
+rm(mm, cov)
+```
+
+```{r, diffM_TT_plot, message=FALSE, warning=FALSE, fig.height = 6}
+diffMethPerChr(diffM_TT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=10)
+diffMethPerChr(diffM_TT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)
+```
+
+### CT vs CC 
+```{r diffM_CT}
+mm <- united_meth
+cov <- meta %>%
+  filter(genotype!="TT") %>%
+  mutate(genotype = ifelse(genotype=="CT", 1, 0))
+  
+diffM_CT <- reorganize(mm, 
+                       sample.ids = cov$sample_id, 
+                       treatment= cov$genotype) %>%
+            calculateDiffMeth(covariates = dplyr::select(cov, age, sex))
+
+```
+
+```{r, diffM_CT_plot, message=FALSE, warning=FALSE, fig.height = 6}
+diffMethPerChr(diffM_CT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=10)
+diffMethPerChr(diffM_CT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)
+```
+
+## Gene parts annotation {.tabset .tabset-fade .tabset-pills}
+Gene parts for site that are > 10% deferentially methylated 
+
+### TT vs CC
+```{r, gene_parts_TT, results="hide"}
+diffM <- diffM_TT
+
+# Get hypermethylated sites with difference > 10% and convert to GRanges
+diffM10.hyper <- getMethylDiff(diffM, difference=10, qvalue=0.01, type="hyper") %>%
+  as("GRanges")
+
+# Get hypomethylated sites with difference > 10% and convert to GRanges
+diffM10.hypo <- getMethylDiff(diffM, difference=10, qvalue=0.01, type="hypo") %>%
+  as("GRanges")
+
+
+# Get gene parts annotation
+gene.obj=readTranscriptFeatures("data/mm10.refseq.genes.bed")
+
+hypo10.ann <- annotateWithGeneParts(diffM10.hypo,  gene.obj)
+
+hyper10.ann <- annotateWithGeneParts(diffM10.hyper, gene.obj)
+
+# Get flank annotation
+cpg.obj=readFeatureFlank("data/mm10.refseq.genes.bed",
+                           feature.flank.name=c("CpGi","shores"))
+
+diffCpGann.hypo10 <- annotateWithFeatureFlank(diffM10.hypo,
+                                    cpg.obj$CpGi,cpg.obj$shores,
+                         feature.name="CpGi",flank.name="shores")
+
+diffCpGann.hyper10 <- annotateWithFeatureFlank(diffM10.hyper,
+                                    cpg.obj$CpGi,cpg.obj$shores,
+                         feature.name="CpGi",flank.name="shores")
+rm(diffM)
+```
+
+```{r gene_parts_plots_TT, fig.show='hold', out.width=c('50%', '50%')}
+plotTargetAnnotation(hypo10.ann, precedence=TRUE,
+    main="Hypo-methylated gene parts; > 10% diff.")
+
+plotTargetAnnotation(hyper10.ann, precedence=TRUE,
+    main="Hyper-methylated gene parts; > 10% diff.")
+
+
+plotTargetAnnotation(diffCpGann.hypo10,col=c("green","gray","white"),
+       main="Hypo-methylated flank annotation; > 10% diff.")
+
+plotTargetAnnotation(diffCpGann.hyper10,col=c("green","gray","white"),
+       main="Hyper-methylated flank annotation; > 10% diff.")
+
+```
+
+### CT vs CC
+```{r, gene_parts_CT, results="hide"}
+diffM <- diffM_CT
+
+# Get hypermethylated sites with difference > 10% and convert to GRanges
+diffM10.hyper <- getMethylDiff(diffM, difference=10, qvalue=0.01, type="hyper") %>%
+  as("GRanges")
+
+# Get hypomethylated sites with difference > 10% and convert to GRanges
+diffM10.hypo <- getMethylDiff(diffM, difference=10, qvalue=0.01, type="hypo") %>%
+  as("GRanges")
+
+
+# Get gene parts annotation
+gene.obj=readTranscriptFeatures("data/mm10.refseq.genes.bed")
+
+hypo10.ann <- annotateWithGeneParts(diffM10.hypo,  gene.obj)
+
+hyper10.ann <- annotateWithGeneParts(diffM10.hyper, gene.obj)
+
+# Get flank annotation
+cpg.obj=readFeatureFlank("data/mm10.refseq.genes.bed",
+                           feature.flank.name=c("CpGi","shores"))
+
+diffCpGann.hypo10 <- annotateWithFeatureFlank(diffM10.hypo,
+                                    cpg.obj$CpGi,cpg.obj$shores,
+                         feature.name="CpGi",flank.name="shores")
+
+diffCpGann.hyper10 <- annotateWithFeatureFlank(diffM10.hyper,
+                                    cpg.obj$CpGi,cpg.obj$shores,
+                         feature.name="CpGi",flank.name="shores")
+rm(diffM)
+```
+
+```{r gene_parts_plots_CT, results="hold", fig.show='hold', out.width=c('50%', '50%')}
+plotTargetAnnotation(hypo10.ann, precedence=TRUE,
+    main="Hypo-methylated gene parts; > 10% diff.")
+
+plotTargetAnnotation(hyper10.ann, precedence=TRUE,
+    main="Hyper-methylated gene parts; > 10% diff.")
+
+
+plotTargetAnnotation(diffCpGann.hypo10,col=c("green","gray","white"),
+       main="Hypo-methylated flank annotation; > 10% diff.")
+
+plotTargetAnnotation(diffCpGann.hyper10,col=c("green","gray","white"),
+       main="Hyper-methylated flank annotation; > 10% diff.")
+
+```
+
+## Output
+Saving differential methylation objects as RDS for subsequent analyses.
+```{r output}
+saveRDS(diffM_TT, file="output/RRBS_Pilot/3_Differential_Methylation/diffM_TT.RDS")
+saveRDS(diffM_CT, file="output/RRBS_Pilot/3_Differential_Methylation/diffM_CT.RDS")
+```

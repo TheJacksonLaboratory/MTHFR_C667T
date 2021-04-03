@@ -26,7 +26,7 @@ navbar:
       - text: "Exploratory Analysis"
         href: RRBS_2_Exploratory_Analysis.html
       - text: "Differential Methylation"
-        #href: RRBS_3_Differential_Methylation.html
+        href: RRBS_3_Differential_Methylation.html
       - text: "Methylation by Position"
         #href: RRBS_4_Methylation_Position.html
     - text: "RNAseq"

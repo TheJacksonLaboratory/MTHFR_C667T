@@ -10,9 +10,7 @@ output:
 
 ```{r setup, warning=FALSE, message=FALSE}
 knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
-knitr::opts_chunk$set(cache=TRUE, cache.extra = R.version, 
-                      #cache.path = "output/RRBS_Pilot/2_Exploratory_Analysis/",
-                      message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(cache=TRUE,message=FALSE, warning=FALSE)
 ```
 
 ```{r libraries}
@@ -52,7 +50,7 @@ sbatch run_nf_methylseq.sbatch
 cp run_nf_methylseq.sbatch /projects/carter-lab/MTHFR/assets/RRBS_Pilot_run_nf_methylseq.sbatch
 ```
 
-```{bash,e val=FALSE, include=FALSE}
+```{bash, eval=FALSE, include=FALSE}
 singularity exec ~/bin/htslib samtools faidx \
               /projects/carter-lab/MTHFR/data/RRBS_Pilot/33139_R1.fastq.gz
 cut -f1,2 33139_R1.fai > chromsizes_33139.txt
