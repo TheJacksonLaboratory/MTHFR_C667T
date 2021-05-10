@@ -35,8 +35,8 @@ navbar:
         href: RNAseq_0_Sample_Metadata.html
       - text: "Processing and QC"
         href: RNAseq_1_Processing_QC.html
-      - text: "Exploratory Analysis"
-        #href: RNAseq_2_Exploratory_Analysis.html
+      - text: "Differential Expression"
+        href: RNAseq_2_Differential_Expression.html
   right:
     - icon: fab fa-github
       href: https://github.com/TheJacksonLaboratory/MTHFR_C667T

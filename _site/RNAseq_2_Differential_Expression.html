@@ -11,9 +11,8 @@
 
 <meta name="author" content="Annat Haber" />
 
-<meta name="date" content="2021-05-07" />
 
-<title>MTHFR RRBS Exploratory Analysis</title>
+<title>RNAseq Differential Expression</title>
 
 <script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -429,169 +428,135 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">MTHFR RRBS Exploratory Analysis</h1>
+<h1 class="title toc-ignore">RNAseq Differential Expression</h1>
 <h4 class="author">Annat Haber</h4>
-<h4 class="date">2021-05-07</h4>
+<h4 class="date">5/1/2021</h4>
 
 </div>
 
 
-<pre class="r"><code>rm(list=ls())
-
-suppressPackageStartupMessages({
-  library(synapser)
-  #library(methylKit)
+<pre class="r"><code>knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = TRUE)</code></pre>
+<pre class="r"><code>suppressPackageStartupMessages({
   library(tidyverse)
-  library(betareg)
-  library(emmeans)
-  library(ComplexHeatmap)
-})</code></pre>
+  library(synapser)
+  library(DESeq2)
+  })</code></pre>
 <div id="input" class="section level2">
 <h2>Input</h2>
-<p>Input is percent methylation in each site for each sample (samples x sites matrix), including only sites within CpG context that are covered in all samples with at least 10x coverage.</p>
-<pre class="r"><code>site_meth &lt;- readRDS(file = &quot;output/RRBS/1_Processing_QC/persite_meth.RDS&quot;)
-# meta
-meta &lt;- readRDS(file = &quot;output/RRBS/sample_meta.RDS&quot;)
+<p>Read sample metadata and raw counts.<br />
+Sort everything by sample ID.<br />
+Filter out genes that have less than 100x reads total.</p>
+<pre class="r"><code># read sample info
+meta &lt;- readRDS(&quot;output/RNAseq/1_Processing_QC/samplesheet_meta.RDS&quot;)
 
-hmc &lt;- read_tsv(&quot;data/homocysteine.txt&quot;, col_types = cols(&quot;c&quot;,&quot;n&quot;))
+# get mapping between pipeline sample id and original sample id
+idkey &lt;- read_csv(&quot;output/RNAseq/1_Processing_QC/nf_rnaseq_output/pipeline_info/samplesheet.valid.csv&quot;) 
+idkey$sample &lt;- sub(&quot;_T1&quot;, &quot;&quot;, idkey$sample)
+idkey$sample_id &lt;- sub(&quot;(\\d+)_R1.fastq.gz&quot;, &quot;\\1&quot;, basename(idkey$fastq_1))
+idkey &lt;- idkey[,c(&quot;sample&quot;, &quot;sample_id&quot;)] %&gt;%
+  arrange(sample_id)
 
-meta &lt;- left_join(meta, hmc, by=&quot;tag_id&quot;)</code></pre>
+# read raw counts
+ctsfile &lt;- &quot;output/RNAseq/1_Processing_QC/nf_rnaseq_output/star_rsem/rsem.merged.gene_counts.tsv&quot;
+counts &lt;- read_tsv(ctsfile) %&gt;%
+  dplyr::select(-&quot;transcript_id(s)&quot;) %&gt;%
+  column_to_rownames(&quot;gene_id&quot;) %&gt;%
+  round() %&gt;%
+  as.matrix()
+
+# replace pipeline sample id with original sample id
+counts &lt;- counts[,idkey$sample]
+colnames(counts) &lt;- idkey$sample_id
+# Filter out genes that have less than 100x reads total
+counts &lt;- counts[rowSums(counts) &gt;100,]</code></pre>
 </div>
-<div id="pattern-of-methylation" class="section level2 tabset tabset-fade tabset-pills">
-<h2>Pattern of Methylation</h2>
-<div id="with-outliers" class="section level3">
-<h3>With Outliers</h3>
-<div id="pca" class="section level4">
-<h4>PCA</h4>
-<pre class="r"><code>pc &lt;- prcomp(site_meth, center = TRUE)
-plot(pc)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern_withOutliers-1.png" width="672" /></p>
-<pre class="r"><code>df &lt;- left_join(dplyr::select(meta, age, sex, genotype, sample_id),
-                as_tibble(pc$x[,1:2], rownames = &quot;sample_id&quot;),
-                by=&quot;sample_id&quot;)
+<div id="deseq-objects-and-results" class="section level2 tabset tabset-fade tabset-pills">
+<h2>DESeq objects and results</h2>
+<p>For each combination of sex (M,F) and age (6,18) we compare CT to CC and TT to CC.<br />
+Genes with p-adj &lt; 0.1 are in blue.</p>
+<pre class="r"><code>#grp &lt;- unique(meta$group[meta$genotype!=&quot;CC&quot;])
+grp &lt;- meta %&gt;%
+  filter(genotype!=&quot;CC&quot;) %&gt;%
+  distinct(genotype, sex, age)
 
-outliers &lt;- df %&gt;% filter(abs(PC1) &gt; 2000 | abs(PC2) &gt; 2000)
+ddsL &lt;- de_resL &lt;- list()
+
+for (i in 1:nrow(grp)) {
+  gt &lt;- grp$genotype[i]
+  sx &lt;- grp$sex[i]
+  ag &lt;- grp$age[i]
+  gr &lt;- paste(gt, sx, ag, sep=&quot;_&quot;)
   
-ggplot(df, aes(x=PC1,y=PC2)) + 
-  geom_point(aes(shape=sex, color=genotype, size=age)) +
-  scale_size_discrete(range=c(3,1.5)) +
-  geom_text(data=outliers, aes(label=sample_id), vjust = &quot;inward&quot;,  hjust = &quot;inward&quot;)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern_withOutliers-2.png" width="672" /></p>
-<pre class="r"><code>rm(df)</code></pre>
-</div>
-</div>
-<div id="without-outliers" class="section level3">
-<h3>Without Outliers</h3>
-<pre class="r"><code>site_meth.wou &lt;- site_meth[-which(rownames(site_meth) %in% outliers$sample_id),]
-meta.wou &lt;- filter(meta, !sample_id %in% outliers$sample_id)</code></pre>
-<div id="pca-1" class="section level4">
-<h4>PCA</h4>
-<pre class="r"><code>pc &lt;- prcomp(site_meth.wou, center = TRUE)
-plot(pc)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern__noOutliers-1.png" width="672" /></p>
-<pre class="r"><code>left_join(select(meta.wou, age, sex, genotype, sample_id),
-                as_tibble(pc$x[,1:2], rownames = &quot;sample_id&quot;),
-                by=&quot;sample_id&quot;) %&gt;%
-  ggplot(aes(x=PC1,y=PC2)) + 
-  geom_point(aes(shape=sex, color=genotype, size=age)) +
-  scale_size_discrete(range=c(3,1.5)) </code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern__noOutliers-2.png" width="672" /></p>
-<pre class="r"><code>#+
-#  geom_text(data=outliers, aes(label=sample_id), vjust = -0.5,  hjust = -0.5)</code></pre>
-</div>
-</div>
-</div>
-<div id="global-methylation" class="section level2 tabset tabset-fade tabset-pills">
-<h2>Global methylation</h2>
-<div id="counts" class="section level3">
-<h3>Counts</h3>
-<p>Calculating global methylation as the fraction of sites determined as methylated by bismark for each sample.</p>
-<pre class="r"><code>global_meth_counts &lt;- read_tsv(&quot;output/RRBS/1_Processing_QC/nf_methylseq_output/bismark_summary/bismark_summary_report.txt&quot;) %&gt;%
-  tibble(.name_repair = &quot;universal&quot;) %&gt;%
-  mutate(sample_id = substr(File, 1, 5),
-         global_meth_counts = Methylated.CpGs / (Methylated.CpGs + Unmethylated.CpGs) ) %&gt;%
-  select(global_meth_counts, sample_id)
+  coldata &lt;- meta %&gt;%
+    filter(genotype %in% c(&quot;CC&quot;,gt) &amp; sex == sx &amp; age == ag) %&gt;%
+    select(genotype, sample_id) %&gt;%
+    column_to_rownames(&quot;sample_id&quot;)
 
-meta.gm &lt;-  left_join(meta, global_meth_counts, by=&quot;sample_id&quot;)</code></pre>
-<p>Using Beta regression to test differences in global methylation as a function of sex, age, and genotype. None of the factors and interactions is significant.</p>
-<pre class="r"><code>br.df &lt;- meta.gm %&gt;%
-  mutate(genotype = recode(genotype, &quot;CC&quot;=0, &quot;CT&quot;=1, &quot;TT&quot;=2),
-         sex = recode(sex, &quot;F&quot;=0, &quot;M&quot;=1),
-         age = recode(age, &quot;6&quot;=0, &quot;18&quot;=1))
-   
-model = betareg(global_meth_counts ~ genotype + age + sex, data = br.df)
-emmeans::joint_tests(model)</code></pre>
-<pre><code>##  model term       df1 df2 F.ratio p.value
-##  genotype           1 Inf   0.235 0.6278 
-##  age                1 Inf   0.550 0.4582 
-##  sex                1 Inf   0.315 0.5744 
-##  genotype:age       1 Inf   0.162 0.6873 
-##  genotype:sex       1 Inf   0.132 0.7160 
-##  age:sex            1 Inf   0.202 0.6531 
-##  genotype:age:sex   1 Inf   0.107 0.7442</code></pre>
-<pre class="r"><code>ggplot(meta.gm, aes(x=genotype, y=global_meth_counts, color=age)) +
-  geom_point() +
-  facet_wrap(~ sex)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/global_meth_counts_betareg-1.png" width="672" /></p>
-</div>
-<div id="mean-percent" class="section level3">
-<h3>Mean Percent</h3>
-<p>Calculating global methylation as the mean percent methylation for each sample, averaged across sites.</p>
-<pre class="r"><code>global_meth_perc &lt;- data.frame(global_meth_perc=rowMeans(site_meth)/100, sample_id=rownames(site_meth))</code></pre>
-<p>Using Beta regression to test differences in global methylation as a function of sex, age, and genotype. None of the factors and interactions is significant.</p>
-<pre class="r"><code>meta.gm &lt;-  left_join(meta.gm, global_meth_perc, by=&quot;sample_id&quot;)
+  cts &lt;- counts[, rownames(coldata)]
 
-br.df &lt;- meta.gm %&gt;%
-  mutate(genotype = recode(genotype, &quot;CC&quot;=0, &quot;CT&quot;=1, &quot;TT&quot;=2),
-         sex = recode(sex, &quot;F&quot;=0, &quot;M&quot;=1),
-         age = recode(age, &quot;6&quot;=0, &quot;18&quot;=1))
-   
-model = betareg(global_meth_perc ~ genotype + age + sex, data = br.df)
-emmeans::joint_tests(model)</code></pre>
-<pre><code>##  model term       df1 df2 F.ratio p.value
-##  genotype           1 Inf   0.221 0.6379 
-##  age                1 Inf   1.159 0.2818 
-##  sex                1 Inf   0.027 0.8694 
-##  genotype:age       1 Inf   0.188 0.6645 
-##  genotype:sex       1 Inf   0.024 0.8761 
-##  age:sex            1 Inf   0.027 0.8707 
-##  genotype:age:sex   1 Inf   0.024 0.8770</code></pre>
-<pre class="r"><code>ggplot(meta.gm, aes(x=genotype, y=global_meth_perc, color=age)) +
-  geom_point() +
-  facet_wrap(~ sex)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/global_meth_percent_betareg-1.png" width="672" /></p>
+  dds &lt;- DESeqDataSetFromMatrix(cts, coldata, design = ~ genotype)
+  dds$genotype &lt;- relevel(dds$genotype, ref = &quot;CC&quot;)
+ 
+  ddsL[[gr]] &lt;- dds &lt;- DESeq(dds)
+  res &lt;- results(dds)
+  res &lt;- res[order(res),]
+  de_resL[[gr]] &lt;- res
+  
+  rm(gt, sx, ag, coldata, cts, dds, res)
+}</code></pre>
+<pre class="r"><code>for(gr in names(de_resL)){
+  cat(&quot;### &quot;, gr ,&quot;\n&quot;)
+  res &lt;- de_resL[[gr]]
+  #cat(summary(res))
+  cat(plotMA(res), &quot;\n&quot;)
+  cat(&quot;\n&quot;, &quot;significant genes:\n&quot;, rownames(res[which(res$padj&lt;0.1),]))
+  cat(&#39;\n\n&#39;)
+}</code></pre>
+<div id="ct_f_18" class="section level3">
+<h3>CT_F_18</h3>
+<p><img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res-1.png" width="672" /></p>
+<p>significant genes:</p>
 </div>
-<div id="correlation-with-homocysteine-level" class="section level3">
-<h3>Correlation with homocysteine level</h3>
-<pre class="r"><code>ggplot(meta.gm, aes(x = hmc, y = global_meth_counts)) + 
-  geom_point(aes(shape=sex, color=genotype, size=age)) +
-  scale_size_discrete(range=c(3,1.5)) +
-  ggtitle(&quot;Counts&quot;)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/hmc-1.png" width="50%" /></p>
-<pre class="r"><code>ggplot(meta.gm, aes(x = hmc, y = global_meth_perc)) + 
-  geom_point(aes(shape=sex, color=genotype, size=age)) +
-  scale_size_discrete(range=c(3,1.5)) +
-  ggtitle(&quot;Percent&quot;)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/hmc-2.png" width="50%" /></p>
+<div id="ct_m_18" class="section level3">
+<h3>CT_M_18</h3>
+<p><img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res-2.png" width="672" /></p>
+<p>significant genes:</p>
+</div>
+<div id="ct_f_6" class="section level3">
+<h3>CT_F_6</h3>
+<p><img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res-3.png" width="672" /></p>
+<p>significant genes: ENSMUSG00000007207 ENSMUSG00000025417 ENSMUSG00000021559 ENSMUSG00000054808 ENSMUSG00000030329 ENSMUSG00000009013 ENSMUSG00000029436 ENSMUSG00000041708 ENSMUSG00000040640 ENSMUSG00000032773 ENSMUSG00000102543 ENSMUSG00000007950 ENSMUSG00000059173 ENSMUSG00000028514 ENSMUSG00000050821 ENSMUSG00000029581 ENSMUSG00000048644 ENSMUSG00000021466 ENSMUSG00000052387 ENSMUSG00000028152 ENSMUSG00000053550 ENSMUSG00000039671 ENSMUSG00000027221 ENSMUSG00000063229 ENSMUSG00000045994 ENSMUSG00000039126 ENSMUSG00000070498 ENSMUSG00000032470 ENSMUSG00000026259 ENSMUSG00000039943 ENSMUSG00000034818 ENSMUSG00000021062 ENSMUSG00000021373 ENSMUSG00000025372 ENSMUSG00000037428 ENSMUSG00000004936 ENSMUSG00000070047 ENSMUSG00000020589 ENSMUSG00000021775 ENSMUSG00000022099 ENSMUSG00000026090 ENSMUSG00000032368 ENSMUSG00000067879 ENSMUSG00000024411 ENSMUSG00000004187 ENSMUSG00000031543 ENSMUSG00000061689 ENSMUSG00000065954 ENSMUSG00000040125 ENSMUSG00000028782 ENSMUSG00000061911 ENSMUSG00000032936 ENSMUSG00000026452 ENSMUSG00000030653 ENSMUSG00000024403 ENSMUSG00000022010 ENSMUSG00000009569 ENSMUSG00000015829 ENSMUSG00000032966 ENSMUSG00000028832 ENSMUSG00000029657 ENSMUSG00000003363 ENSMUSG00000055430 ENSMUSG00000059456 ENSMUSG00000060961 ENSMUSG00000026204 ENSMUSG00000072214 ENSMUSG00000054728 ENSMUSG00000062296 ENSMUSG00000061751 ENSMUSG00000029120 ENSMUSG00000053025 ENSMUSG00000027347 ENSMUSG00000031778 ENSMUSG00000041444 ENSMUSG00000019302 ENSMUSG00000056486 ENSMUSG00000041773 ENSMUSG00000046093 ENSMUSG00000022421 ENSMUSG00000070570 ENSMUSG00000002265 ENSMUSG00000030209 ENSMUSG00000030695 ENSMUSG00000024617 ENSMUSG00000101111</p>
+</div>
+<div id="ct_m_6" class="section level3">
+<h3>CT_M_6</h3>
+<p><img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res-4.png" width="672" /></p>
+<p>significant genes:</p>
+</div>
+<div id="tt_f_18" class="section level3">
+<h3>TT_F_18</h3>
+<p><img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res-5.png" width="672" /></p>
+<p>significant genes:</p>
+</div>
+<div id="tt_m_18" class="section level3">
+<h3>TT_M_18</h3>
+<p><img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res-6.png" width="672" /></p>
+<p>significant genes: ENSMUSG00000105703</p>
+</div>
+<div id="tt_f_6" class="section level3">
+<h3>TT_F_6</h3>
+<p><img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res-7.png" width="672" /></p>
+<p>significant genes: ENSMUSG00000093445</p>
+</div>
+<div id="tt_m_6" class="section level3">
+<h3>TT_M_6</h3>
+<p><img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res-8.png" width="672" /></p>
+<p>significant genes: ENSMUSG00000000889</p>
 </div>
 </div>
 <div id="output" class="section level2">
 <h2>Output</h2>
-<p>Uploading sample metadata with their global methylation values to <a href="https://www.synapse.org/#!Synapse:syn23573590/wiki/607402">Synapse</a></p>
-<pre class="r"><code>write_csv(meta.gm, file=&quot;output/RRBS/2_Exploratory_Analysis/RRBS_meta_globalmeth.csv&quot;)
-
-# upload meta_global_meth to synapse
-synLogin() 
-
-file &lt;- File(&quot;output/RRBS/2_Exploratory_Analysis/RRBS_meta_globalmeth.csv&quot;,
-             contentType = &quot;text/plain&quot;,
-             description = &quot;RRBS sample metadata with their global methylation values&quot;,
-             parent = &quot;syn25174486&quot;)
-
-provenance &lt;- Activity(used = c(&quot;syn25174542&quot;, &quot;syn25174517&quot;),
-                       executed = &quot;https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RRBS_2_Exploratory_Analysis.Rmd&quot;)
-
-file &lt;- synStore(file, activity=provenance)</code></pre>
+<p>Uploading to synapse</p>
 </div>
 
 

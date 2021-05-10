@@ -29,6 +29,8 @@ suppressPackageStartupMessages({
   library(clusterProfiler)
   library(GOsummaries)
   library(org.Mm.eg.db)
+  library(biomaRt)
+  library(vcd)
 })
 
 ```
@@ -40,8 +42,23 @@ meta <- read_csv(file="output/RRBS_Pilot/2_Exploratory_Analysis/RRBS_Pilot_meta_
                  col_types = cols(.default = "c"))
 ```
 
-## Differential methyation {.tabset .tabset-fade .tabset-pills}
-Using age as covariate
+## Differentially Methylated CpG sites  {.tabset .tabset-fade .tabset-pills}
+Finding differentially methylated CpG sites using age as covariate.  
+Mapping to known genes by finding overlap between the snp's and mm10 reference.  
+The reference annotation was downloaded directly from http://genome.ucsc.edu/cgi-bin/hgTables 
+
+```{r refseq_gr}
+# read reference and convert to GRanges
+refseq <- read_tsv("data/mm10.refseq.genes.txt") 
+
+ref.gr <- GRanges(
+        seqnames = substr(refseq$chrom, 4,5),
+        ranges=IRanges(start = refseq$txStart, end = refseq$txEnd),
+        mgi_name=refseq$name2
+        )
+names(ref.gr) <- refseq$name
+rm(refseq)
+```
 
 ### TT vs CC 
 ```{r diffM_TT}
@@ -58,8 +75,40 @@ diffM_TT <- reorganize(mm,
 rm(mm, cov)
 ```
 
+
+```{r, map_DMgenes_TT, results="hide"}
+diffM <- diffM_TT
+# extract significant sites and convert to GRanges
+snp.gr <- getMethylDiff(diffM, difference = 0, qvalue=0.01, type="all") %>%
+  as("GRanges")
+names(snp.gr) <- paste(snp.gr@seqnames@values, snp.gr@ranges@start, sep=":")
+
+# Find overlap with reference
+overlap <- findOverlaps(snp.gr, ref.gr)
+hits <- ref.gr$mgi_name[slot(overlap, "to")]
+names(hits) <- names(snp.gr)[slot(overlap, "from")]
+hits <- hits[!duplicated(hits)]
+snpDMgenes <- snp.gr[names(hits),]
+mcols(snpDMgenes)$mgi_name <- hits
+
+snpDMgenes <- data.frame(snpDMgenes) %>%
+  dplyr::select(chromosome=seqnames, everything()) %>%
+  arrange(chromosome, meth.diff)
+
+# separate hypo and hyper methylated gene sets
+snpDMgenes_TT <- list("hypo"= snpDMgenes %>%
+                        filter(qvalue < 0.01 & meth.diff < 0) %>%
+                        arrange(meth.diff),
+                      "hyper"= snpDMgenes %>%
+                        filter(qvalue < 0.01 & meth.diff > 0) %>%
+                        arrange(-meth.diff)
+                      )
+
+rm(diffM, snp.gr, snpDMgenes, hits, overlap)
+```
+
 ```{r, diffM_TT_plot, message=FALSE, warning=FALSE, fig.height = 6}
-diffMethPerChr(diffM_TT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=10)
+diffMethPerChr(diffM_TT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)
 diffMethPerChr(diffM_TT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)
 ```
 
@@ -75,15 +124,47 @@ diffM_CT <- reorganize(mm,
                        treatment= cov$genotype) %>%
             calculateDiffMeth(covariates = as.data.frame(cov$age))
 
+rm(mm, cov)
+```
+
+```{r, map_DMgenes_CT, results="hide"}
+diffM <- diffM_CT
+# extract significant sites and convert to GRanges
+snp.gr <- getMethylDiff(diffM, difference = 0, qvalue=0.01, type="all") %>%
+  as("GRanges")
+names(snp.gr) <- paste(snp.gr@seqnames@values, snp.gr@ranges@start, sep=":")
+
+# Find overlap with reference
+overlap <- findOverlaps(snp.gr, ref.gr)
+hits <- ref.gr$mgi_name[slot(overlap, "to")]
+names(hits) <- names(snp.gr)[slot(overlap, "from")]
+hits <- hits[!duplicated(hits)]
+snpDMgenes <- snp.gr[names(hits),]
+mcols(snpDMgenes)$mgi_name <- hits
+
+snpDMgenes <- data.frame(snpDMgenes) %>%
+  dplyr::select(chromosome=seqnames, everything()) %>%
+  arrange(chromosome, meth.diff)
+
+# separate hypo and hyper methylated gene sets
+snpDMgenes_CT <- list("hypo"= snpDMgenes %>%
+                        filter(qvalue < 0.01 & meth.diff < 0) %>%
+                        arrange(meth.diff),
+                      "hyper"= snpDMgenes %>%
+                        filter(qvalue < 0.01 & meth.diff > 0) %>%
+                        arrange(-meth.diff)
+                      )
+
+rm(diffM, snp.gr, snpDMgenes, hits, overlap)
 ```
 
 ```{r, diffM_CT_plot, message=FALSE, warning=FALSE, fig.height = 6}
-diffMethPerChr(diffM_CT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=10)
+diffMethPerChr(diffM_CT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)
 diffMethPerChr(diffM_CT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)
 ```
 
 ## Gene parts annotation {.tabset .tabset-fade .tabset-pills}
-Gene parts for site that are > 10% deferentially methylated 
+Gene parts distribution for site that are differentially-methylated 
 
 ### TT vs CC
 ```{r, gene_parts_TT, results="hide"}
@@ -171,23 +252,190 @@ rm(diffM)
 
 ```{r gene_parts_plots_CT, results="hold", fig.show='hold', out.width=c('50%', '50%')}
 plotTargetAnnotation(hypo10.ann, precedence=TRUE,
-    main="Hypo-methylated gene parts; > 10% diff.")
+    main="Hypo-methylated gene parts")
 
 plotTargetAnnotation(hyper10.ann, precedence=TRUE,
-    main="Hyper-methylated gene parts; > 10% diff.")
+    main="Hyper-methylated gene parts")
 
 
 plotTargetAnnotation(diffCpGann.hypo10,col=c("green","gray","white"),
-       main="Hypo-methylated flank annotation; > 10% diff.")
+       main="Hypo-methylated flank annotation")
 
 plotTargetAnnotation(diffCpGann.hyper10,col=c("green","gray","white"),
-       main="Hyper-methylated flank annotation; > 10% diff.")
+       main="Hyper-methylated flank annotation")
 
 ```
 
+## KEGG Annotation {.tabset .tabset-fade .tabset-pills}
+
+### TT vs CC
+
+```{r, kegg_annotation_TT, results="hide", fig.width = 10}
+sig.gs <- snpDMgenes_TT
+
+# get entrez id
+sig.gs.ez <- list()
+for (gs in names(sig.gs)) {
+  sig.gs.ez[[gs]] <- bitr(sig.gs[[gs]]$mgi_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Mm.eg.db")$ENTREZID
+}
+
+kegg_anno_TT <- list()
+for (gs in names(sig.gs.ez)) {
+  cat("\n Annotating:", gs,"-methylated genes\n")
+  
+  anno <- enrichKEGG(gene = sig.gs.ez[[gs]],
+                organism = "mmu",
+                keyType = "ncbi-geneid",
+                pvalueCutoff = 0.5,
+                pAdjustMethod = "BH",
+                minGSSize = 10,
+                maxGSSize = 500,
+                qvalueCutoff = 0.5,
+                use_internal_data = FALSE)
+  
+  print(barplot(anno, showCategory=20, title=paste0("KEGG pathways for ", gs, "-methylated sites")))
+  anno <- setReadable(anno, OrgDb = org.Mm.eg.db, keyType="ENTREZID")
+  anno <- as.data.frame(anno@result)
+  write_csv(anno, file=paste0("output/RRBS_Pilot/3_Differential_Methylation/kegg_anno_TT_", gs, ".csv"))
+
+  kegg_anno_TT[[gs]] <- anno
+  rm(anno)
+  }
+
+rm(sig.gs, sig.gs.ez)
+```
+
+### CT vs CC
+```{r, kegg_annotation_CT, results="hide", fig.width = 10}
+sig.gs <- snpDMgenes_CT
+
+# get entrez id
+sig.gs.ez <- list()
+for (gs in names(sig.gs)) {
+  sig.gs.ez[[gs]] <- bitr(sig.gs[[gs]]$mgi_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Mm.eg.db")$ENTREZID
+}
+kegg_anno_CT <- list()
+for (gs in names(sig.gs.ez)) {
+  cat("\n Annotating:", gs,"-methylated genes\n")
+  
+  anno <- enrichKEGG(gene = sig.gs.ez[[gs]],
+                organism = "mmu",
+                keyType = "ncbi-geneid",
+                pvalueCutoff = 0.5,
+                pAdjustMethod = "BH",
+                minGSSize = 10,
+                maxGSSize = 500,
+                qvalueCutoff = 0.5,
+                use_internal_data = FALSE)
+  
+  print(barplot(anno, showCategory=20, title=paste0("KEGG pathways for ", gs, "-methylated sites")))
+  anno <- setReadable(anno, OrgDb = org.Mm.eg.db, keyType="ENTREZID")
+  anno <- as.data.frame(anno@result)
+  write_csv(anno, file=paste0("output/RRBS_Pilot/3_Differential_Methylation/kegg_anno_CT_", gs, ".csv"))
+
+  kegg_anno_CT[[gs]] <- anno
+  rm(anno)
+  }
+
+rm(sig.gs, sig.gs.ez)
+
+```
+
+## Cell-specificity {.tabset .tabset-fade .tabset-pills}
+Cell type markers in the brain are taken from McKenzie et al. (Supplemental File 1, DOI:10.1038/s41598-018-27293-5).
+Cell specificity for a given gene is the minimum log fold change when pairwise comparing the expression of the gene in the given cell type with the expression of the gene in all other cell types.
+Here I'm using cell specificity score to annotate the differentially-methylated genes, with chi-square to test for biased representations of any cell type genes in either the hypo- or hyper-methylated genes, and a plot of deviations from expectation for visualization.  
+
+```{r cell_spec_ref}
+cell.types <- c("Astroctyes", "Endothelial", "Microglia", "Neurons", "Oligodendrocytes")
+sets <- c("hypo","hyper")
+
+# read cell-specificity reference
+hum.specific <- read.csv("data/McKenzie_2017_Brain_Cell_Specific_Markers_Human_Specificity.csv", header=T, stringsAsFactors=F)
+hum.specific <- split(hum.specific, hum.specific$Celltype, drop=TRUE) 
+names(hum.specific) <- cell.types
+
+# convert HGNC.ID in the specificity reference to MGI names
+human = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+mouse = useMart("ensembl", dataset = "mmusculus_gene_ensembl")
+
+hum.specific.mg <- list()
+for (ct in names(hum.specific)) {
+  hum.specific.mg[[ct]] = getLDS(attributes = c("hgnc_symbol"), filters = "hgnc_symbol", 
+                              values = hum.specific[[ct]]$gene, mart = human,
+                              attributesL = c("mgi_symbol"), martL = mouse, uniqueRows=T)$MGI.symbol
+  }
+
+```
+
+### TT vs CT
+There is in general little overlap between the cell markers and our differentially-methylated genes, and no significant association between them. Hypomethylated genes are somewhat enriched for astrocytes. The hypermethylated genes are more endothelial, but none of it is significant.
+Note, the chi-square test compares hypomethylated sites relative to hypermethylated sites, not within each set. 
+```{r cell_spec_TT}
+sig.gs <- snpDMgenes_TT
+
+# get gene sets
+gene.sets <- lapply(sig.gs, function(l){dplyr::select(l, mgi_name)})
+
+gene.sets.hg <- list()
+for (s in names(sig.gs)) {
+    gene.sets.hg[[s]] = getLDS(attributes = c("mgi_symbol"), filters = "mgi_symbol", 
+                              values = sig.gs[[s]]$mgi_name, mart = mouse,
+                              attributesL = c("hgnc_symbol"), martL = human, uniqueRows=T)$HGNC.symbol
+
+}
+
+# Number of marker genes for each cell type in each gene set
+specific.set <- sapply(sets, function(s) {
+  sapply(cell.types, function(ct) length(intersect(hum.specific[[ct]]$gene, gene.sets.hg[[s]])), USE.NAMES=T)
+})
+
+print(specific.set)
+chisq.test(specific.set)
+assoc(t(specific.set), shade=TRUE,labeling_args = list(abbreviate_labs = c(6, 9)))
+
+rm(sig.gs, gene.sets, gene.sets.hg, specific.set)
+```
+
+
+### CT vs CC
+```{r cell_spec_CT}
+sig.gs <- snpDMgenes_CT
+
+# get gene sets
+gene.sets <- lapply(sig.gs, function(l){dplyr::select(l, mgi_name)})
+
+gene.sets.hg <- list()
+for (s in names(sig.gs)) {
+    gene.sets.hg[[s]] = getLDS(attributes = c("mgi_symbol"), filters = "mgi_symbol", 
+                              values = sig.gs[[s]]$mgi_name, mart = mouse,
+                              attributesL = c("hgnc_symbol"), martL = human, uniqueRows=T)$HGNC.symbol
+
+}
+
+# Number of marker genes for each cell type in each gene set
+specific.set <- sapply(sets, function(s) {
+  sapply(cell.types, function(ct) length(intersect(hum.specific[[ct]]$gene, gene.sets.hg[[s]])), USE.NAMES=T)
+})
+
+print(specific.set)
+chisq.test(specific.set)
+assoc(t(specific.set), shade=TRUE,labeling_args = list(abbreviate_labs = c(6, 9)))
+
+rm(sig.gs, gene.sets, gene.sets.hg, specific.set)
+```
+
 ## Output
-Saving differential methylation objects as RDS for subsequent analyses.
+Saving differential methylation objects and kegg annotations as RDS for subsequent analyses.   Saving lists of significantly methylated sites and their genes as csv.
 ```{r output}
 saveRDS(diffM_TT, file="output/RRBS_Pilot/3_Differential_Methylation/diffM_TT.RDS")
 saveRDS(diffM_CT, file="output/RRBS_Pilot/3_Differential_Methylation/diffM_CT.RDS")
+
+write_csv(snpDMgenes_TT[[1]], file = "output/RRBS_Pilot/3_Differential_Methylation/snpDMgenes_TT.csv")
+write_csv(snpDMgenes_TT[[2]], file = "output/RRBS_Pilot/3_Differential_Methylation/snpDMgenes_TT.csv", append=TRUE)
+write_csv(snpDMgenes_CT[[1]], file = "output/RRBS_Pilot/3_Differential_Methylation/snpDMgenes_CT.csv")
+write_csv(snpDMgenes_CT[[2]], file = "output/RRBS_Pilot/3_Differential_Methylation/snpDMgenes_CT.csv", append=TRUE)
+
+saveRDS(kegg_anno_TT, file="output/RRBS_Pilot/3_Differential_Methylation/kegg_anno_TT.RDS")
+saveRDS(kegg_anno_CT, file="output/RRBS_Pilot/3_Differential_Methylation/kegg_anno_CT.RDS")
 ```

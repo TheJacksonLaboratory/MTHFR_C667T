@@ -11,7 +11,7 @@
 
 <meta name="author" content="Annat Haber" />
 
-<meta name="date" content="2021-04-03" />
+<meta name="date" content="2021-05-07" />
 
 <title>RRBS Pilot Differential Methylation Annotation</title>
 
@@ -381,7 +381,9 @@ div.tocify {
     <li>
       <a href="RNAseq_1_Processing_QC.html">Processing and QC</a>
     </li>
-    <li class="dropdown-header">Exploratory Analysis</li>
+    <li>
+      <a href="RNAseq_2_Differential_Expression.html">Differential Expression</a>
+    </li>
   </ul>
 </li>
       </ul>
@@ -429,7 +431,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">RRBS Pilot Differential Methylation Annotation</h1>
 <h4 class="author">Annat Haber</h4>
-<h4 class="date">2021-04-03</h4>
+<h4 class="date">2021-05-07</h4>
 
 </div>
 
@@ -450,6 +452,8 @@ suppressPackageStartupMessages({
   library(clusterProfiler)
   library(GOsummaries)
   library(org.Mm.eg.db)
+  library(biomaRt)
+  library(vcd)
 })</code></pre>
 <div id="input" class="section level2">
 <h2>Input</h2>
@@ -457,9 +461,21 @@ suppressPackageStartupMessages({
 meta &lt;- read_csv(file=&quot;output/RRBS_Pilot/2_Exploratory_Analysis/RRBS_Pilot_meta_globalmeth.csv&quot;,
                  col_types = cols(.default = &quot;c&quot;))</code></pre>
 </div>
-<div id="differential-methyation" class="section level2 tabset tabset-fade tabset-pills">
-<h2>Differential methyation</h2>
-<p>Using age as covariate</p>
+<div id="differentially-methylated-cpg-sites" class="section level2 tabset tabset-fade tabset-pills">
+<h2>Differentially Methylated CpG sites</h2>
+<p>Finding differentially methylated CpG sites using age as covariate.<br />
+Mapping to known genes by finding overlap between the snp’s and mm10 reference.<br />
+The reference annotation was downloaded directly from <a href="http://genome.ucsc.edu/cgi-bin/hgTables" class="uri">http://genome.ucsc.edu/cgi-bin/hgTables</a></p>
+<pre class="r"><code># read reference and convert to GRanges
+refseq &lt;- read_tsv(&quot;data/mm10.refseq.genes.txt&quot;) 
+
+ref.gr &lt;- GRanges(
+        seqnames = substr(refseq$chrom, 4,5),
+        ranges=IRanges(start = refseq$txStart, end = refseq$txEnd),
+        mgi_name=refseq$name2
+        )
+names(ref.gr) &lt;- refseq$name
+rm(refseq)</code></pre>
 <div id="tt-vs-cc" class="section level3">
 <h3>TT vs CC</h3>
 <pre class="r"><code>mm &lt;- united_meth
@@ -473,10 +489,37 @@ diffM_TT &lt;- reorganize(mm,
             calculateDiffMeth(covariates = as.data.frame(cov$age))
 
 rm(mm, cov)</code></pre>
-<pre class="r"><code>diffMethPerChr(diffM_TT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=10)</code></pre>
+<pre class="r"><code>diffM &lt;- diffM_TT
+# extract significant sites and convert to GRanges
+snp.gr &lt;- getMethylDiff(diffM, difference = 0, qvalue=0.01, type=&quot;all&quot;) %&gt;%
+  as(&quot;GRanges&quot;)
+names(snp.gr) &lt;- paste(snp.gr@seqnames@values, snp.gr@ranges@start, sep=&quot;:&quot;)
+
+# Find overlap with reference
+overlap &lt;- findOverlaps(snp.gr, ref.gr)
+hits &lt;- ref.gr$mgi_name[slot(overlap, &quot;to&quot;)]
+names(hits) &lt;- names(snp.gr)[slot(overlap, &quot;from&quot;)]
+hits &lt;- hits[!duplicated(hits)]
+snpDMgenes &lt;- snp.gr[names(hits),]
+mcols(snpDMgenes)$mgi_name &lt;- hits
+
+snpDMgenes &lt;- data.frame(snpDMgenes) %&gt;%
+  dplyr::select(chromosome=seqnames, everything()) %&gt;%
+  arrange(chromosome, meth.diff)
+
+# separate hypo and hyper methylated gene sets
+snpDMgenes_TT &lt;- list(&quot;hypo&quot;= snpDMgenes %&gt;%
+                        filter(qvalue &lt; 0.01 &amp; meth.diff &lt; 0) %&gt;%
+                        arrange(meth.diff),
+                      &quot;hyper&quot;= snpDMgenes %&gt;%
+                        filter(qvalue &lt; 0.01 &amp; meth.diff &gt; 0) %&gt;%
+                        arrange(-meth.diff)
+                      )
+
+rm(diffM, snp.gr, snpDMgenes, hits, overlap)</code></pre>
+<pre class="r"><code>diffMethPerChr(diffM_TT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)
+diffMethPerChr(diffM_TT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)</code></pre>
 <p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/diffM_TT_plot-1.png" width="672" /></p>
-<pre class="r"><code>diffMethPerChr(diffM_TT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)</code></pre>
-<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/diffM_TT_plot-2.png" width="672" /></p>
 </div>
 <div id="ct-vs-cc" class="section level3">
 <h3>CT vs CC</h3>
@@ -488,16 +531,45 @@ cov &lt;- meta %&gt;%
 diffM_CT &lt;- reorganize(mm, 
                        sample.ids = cov$sample_id, 
                        treatment= cov$genotype) %&gt;%
-            calculateDiffMeth(covariates = as.data.frame(cov$age))</code></pre>
-<pre class="r"><code>diffMethPerChr(diffM_CT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=10)</code></pre>
+            calculateDiffMeth(covariates = as.data.frame(cov$age))
+
+rm(mm, cov)</code></pre>
+<pre class="r"><code>diffM &lt;- diffM_CT
+# extract significant sites and convert to GRanges
+snp.gr &lt;- getMethylDiff(diffM, difference = 0, qvalue=0.01, type=&quot;all&quot;) %&gt;%
+  as(&quot;GRanges&quot;)
+names(snp.gr) &lt;- paste(snp.gr@seqnames@values, snp.gr@ranges@start, sep=&quot;:&quot;)
+
+# Find overlap with reference
+overlap &lt;- findOverlaps(snp.gr, ref.gr)
+hits &lt;- ref.gr$mgi_name[slot(overlap, &quot;to&quot;)]
+names(hits) &lt;- names(snp.gr)[slot(overlap, &quot;from&quot;)]
+hits &lt;- hits[!duplicated(hits)]
+snpDMgenes &lt;- snp.gr[names(hits),]
+mcols(snpDMgenes)$mgi_name &lt;- hits
+
+snpDMgenes &lt;- data.frame(snpDMgenes) %&gt;%
+  dplyr::select(chromosome=seqnames, everything()) %&gt;%
+  arrange(chromosome, meth.diff)
+
+# separate hypo and hyper methylated gene sets
+snpDMgenes_CT &lt;- list(&quot;hypo&quot;= snpDMgenes %&gt;%
+                        filter(qvalue &lt; 0.01 &amp; meth.diff &lt; 0) %&gt;%
+                        arrange(meth.diff),
+                      &quot;hyper&quot;= snpDMgenes %&gt;%
+                        filter(qvalue &lt; 0.01 &amp; meth.diff &gt; 0) %&gt;%
+                        arrange(-meth.diff)
+                      )
+
+rm(diffM, snp.gr, snpDMgenes, hits, overlap)</code></pre>
+<pre class="r"><code>diffMethPerChr(diffM_CT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)
+diffMethPerChr(diffM_CT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)</code></pre>
 <p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/diffM_CT_plot-1.png" width="672" /></p>
-<pre class="r"><code>diffMethPerChr(diffM_CT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)</code></pre>
-<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/diffM_CT_plot-2.png" width="672" /></p>
 </div>
 </div>
 <div id="gene-parts-annotation" class="section level2 tabset tabset-fade tabset-pills">
 <h2>Gene parts annotation</h2>
-<p>Gene parts for site that are &gt; 10% deferentially methylated</p>
+<p>Gene parts distribution for site that are differentially-methylated</p>
 <div id="tt-vs-cc-1" class="section level3">
 <h3>TT vs CC</h3>
 <pre class="r"><code>diffM &lt;- diffM_TT
@@ -577,25 +649,202 @@ diffCpGann.hyper10 &lt;- annotateWithFeatureFlank(diffM10.hyper,
                          feature.name=&quot;CpGi&quot;,flank.name=&quot;shores&quot;)
 rm(diffM)</code></pre>
 <pre class="r"><code>plotTargetAnnotation(hypo10.ann, precedence=TRUE,
-    main=&quot;Hypo-methylated gene parts; &gt; 10% diff.&quot;)
+    main=&quot;Hypo-methylated gene parts&quot;)
 
 plotTargetAnnotation(hyper10.ann, precedence=TRUE,
-    main=&quot;Hyper-methylated gene parts; &gt; 10% diff.&quot;)
+    main=&quot;Hyper-methylated gene parts&quot;)
 
 
 plotTargetAnnotation(diffCpGann.hypo10,col=c(&quot;green&quot;,&quot;gray&quot;,&quot;white&quot;),
-       main=&quot;Hypo-methylated flank annotation; &gt; 10% diff.&quot;)
+       main=&quot;Hypo-methylated flank annotation&quot;)
 
 plotTargetAnnotation(diffCpGann.hyper10,col=c(&quot;green&quot;,&quot;gray&quot;,&quot;white&quot;),
-       main=&quot;Hyper-methylated flank annotation; &gt; 10% diff.&quot;)</code></pre>
+       main=&quot;Hyper-methylated flank annotation&quot;)</code></pre>
 <p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/gene_parts_plots_CT-1.png" width="50%" /><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/gene_parts_plots_CT-2.png" width="50%" /><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/gene_parts_plots_CT-3.png" width="50%" /><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/gene_parts_plots_CT-4.png" width="50%" /></p>
+</div>
+</div>
+<div id="kegg-annotation" class="section level2 tabset tabset-fade tabset-pills">
+<h2>KEGG Annotation</h2>
+<div id="tt-vs-cc-2" class="section level3">
+<h3>TT vs CC</h3>
+<pre class="r"><code>sig.gs &lt;- snpDMgenes_TT
+
+# get entrez id
+sig.gs.ez &lt;- list()
+for (gs in names(sig.gs)) {
+  sig.gs.ez[[gs]] &lt;- bitr(sig.gs[[gs]]$mgi_name, fromType=&quot;SYMBOL&quot;, toType=&quot;ENTREZID&quot;, OrgDb=&quot;org.Mm.eg.db&quot;)$ENTREZID
+}
+
+kegg_anno_TT &lt;- list()
+for (gs in names(sig.gs.ez)) {
+  cat(&quot;\n Annotating:&quot;, gs,&quot;-methylated genes\n&quot;)
+  
+  anno &lt;- enrichKEGG(gene = sig.gs.ez[[gs]],
+                organism = &quot;mmu&quot;,
+                keyType = &quot;ncbi-geneid&quot;,
+                pvalueCutoff = 0.5,
+                pAdjustMethod = &quot;BH&quot;,
+                minGSSize = 10,
+                maxGSSize = 500,
+                qvalueCutoff = 0.5,
+                use_internal_data = FALSE)
+  
+  print(barplot(anno, showCategory=20, title=paste0(&quot;KEGG pathways for &quot;, gs, &quot;-methylated sites&quot;)))
+  anno &lt;- setReadable(anno, OrgDb = org.Mm.eg.db, keyType=&quot;ENTREZID&quot;)
+  anno &lt;- as.data.frame(anno@result)
+  write_csv(anno, file=paste0(&quot;output/RRBS_Pilot/3_Differential_Methylation/kegg_anno_TT_&quot;, gs, &quot;.csv&quot;))
+
+  kegg_anno_TT[[gs]] &lt;- anno
+  rm(anno)
+  }</code></pre>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/kegg_annotation_TT-1.png" width="960" /><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/kegg_annotation_TT-2.png" width="960" /></p>
+<pre class="r"><code>rm(sig.gs, sig.gs.ez)</code></pre>
+</div>
+<div id="ct-vs-cc-2" class="section level3">
+<h3>CT vs CC</h3>
+<pre class="r"><code>sig.gs &lt;- snpDMgenes_CT
+
+# get entrez id
+sig.gs.ez &lt;- list()
+for (gs in names(sig.gs)) {
+  sig.gs.ez[[gs]] &lt;- bitr(sig.gs[[gs]]$mgi_name, fromType=&quot;SYMBOL&quot;, toType=&quot;ENTREZID&quot;, OrgDb=&quot;org.Mm.eg.db&quot;)$ENTREZID
+}
+kegg_anno_CT &lt;- list()
+for (gs in names(sig.gs.ez)) {
+  cat(&quot;\n Annotating:&quot;, gs,&quot;-methylated genes\n&quot;)
+  
+  anno &lt;- enrichKEGG(gene = sig.gs.ez[[gs]],
+                organism = &quot;mmu&quot;,
+                keyType = &quot;ncbi-geneid&quot;,
+                pvalueCutoff = 0.5,
+                pAdjustMethod = &quot;BH&quot;,
+                minGSSize = 10,
+                maxGSSize = 500,
+                qvalueCutoff = 0.5,
+                use_internal_data = FALSE)
+  
+  print(barplot(anno, showCategory=20, title=paste0(&quot;KEGG pathways for &quot;, gs, &quot;-methylated sites&quot;)))
+  anno &lt;- setReadable(anno, OrgDb = org.Mm.eg.db, keyType=&quot;ENTREZID&quot;)
+  anno &lt;- as.data.frame(anno@result)
+  write_csv(anno, file=paste0(&quot;output/RRBS_Pilot/3_Differential_Methylation/kegg_anno_CT_&quot;, gs, &quot;.csv&quot;))
+
+  kegg_anno_CT[[gs]] &lt;- anno
+  rm(anno)
+  }</code></pre>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/kegg_annotation_CT-1.png" width="960" /><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/kegg_annotation_CT-2.png" width="960" /></p>
+<pre class="r"><code>rm(sig.gs, sig.gs.ez)</code></pre>
+</div>
+</div>
+<div id="cell-specificity" class="section level2 tabset tabset-fade tabset-pills">
+<h2>Cell-specificity</h2>
+<p>Cell type markers in the brain are taken from McKenzie et al. (Supplemental File 1, <a href="DOI:10.1038/s41598-018-27293-5" class="uri">DOI:10.1038/s41598-018-27293-5</a>). Cell specificity for a given gene is the minimum log fold change when pairwise comparing the expression of the gene in the given cell type with the expression of the gene in all other cell types. Here I’m using cell specificity score to annotate the differentially-methylated genes, with chi-square to test for biased representations of any cell type genes in either the hypo- or hyper-methylated genes, and a plot of deviations from expectation for visualization.</p>
+<pre class="r"><code>cell.types &lt;- c(&quot;Astroctyes&quot;, &quot;Endothelial&quot;, &quot;Microglia&quot;, &quot;Neurons&quot;, &quot;Oligodendrocytes&quot;)
+sets &lt;- c(&quot;hypo&quot;,&quot;hyper&quot;)
+
+# read cell-specificity reference
+hum.specific &lt;- read.csv(&quot;data/McKenzie_2017_Brain_Cell_Specific_Markers_Human_Specificity.csv&quot;, header=T, stringsAsFactors=F)
+hum.specific &lt;- split(hum.specific, hum.specific$Celltype, drop=TRUE) 
+names(hum.specific) &lt;- cell.types
+
+# convert HGNC.ID in the specificity reference to MGI names
+human = useMart(&quot;ensembl&quot;, dataset = &quot;hsapiens_gene_ensembl&quot;)
+mouse = useMart(&quot;ensembl&quot;, dataset = &quot;mmusculus_gene_ensembl&quot;)
+
+hum.specific.mg &lt;- list()
+for (ct in names(hum.specific)) {
+  hum.specific.mg[[ct]] = getLDS(attributes = c(&quot;hgnc_symbol&quot;), filters = &quot;hgnc_symbol&quot;, 
+                              values = hum.specific[[ct]]$gene, mart = human,
+                              attributesL = c(&quot;mgi_symbol&quot;), martL = mouse, uniqueRows=T)$MGI.symbol
+  }</code></pre>
+<div id="tt-vs-ct" class="section level3">
+<h3>TT vs CT</h3>
+<p>There is in general little overlap between the cell markers and our differentially-methylated genes, and no significant association between them. Hypomethylated genes are somewhat enriched for astrocytes. The hypermethylated genes are more endothelial, but none of it is significant. Note, the chi-square test compares hypomethylated sites relative to hypermethylated sites, not within each set.</p>
+<pre class="r"><code>sig.gs &lt;- snpDMgenes_TT
+
+# get gene sets
+gene.sets &lt;- lapply(sig.gs, function(l){dplyr::select(l, mgi_name)})
+
+gene.sets.hg &lt;- list()
+for (s in names(sig.gs)) {
+    gene.sets.hg[[s]] = getLDS(attributes = c(&quot;mgi_symbol&quot;), filters = &quot;mgi_symbol&quot;, 
+                              values = sig.gs[[s]]$mgi_name, mart = mouse,
+                              attributesL = c(&quot;hgnc_symbol&quot;), martL = human, uniqueRows=T)$HGNC.symbol
+
+}
+
+# Number of marker genes for each cell type in each gene set
+specific.set &lt;- sapply(sets, function(s) {
+  sapply(cell.types, function(ct) length(intersect(hum.specific[[ct]]$gene, gene.sets.hg[[s]])), USE.NAMES=T)
+})
+
+print(specific.set)</code></pre>
+<pre><code>##                  hypo hyper
+## Astroctyes         37    12
+## Endothelial        15    12
+## Microglia          17     7
+## Neurons            30    16
+## Oligodendrocytes   16    10</code></pre>
+<pre class="r"><code>chisq.test(specific.set)</code></pre>
+<pre><code>## 
+##  Pearson&#39;s Chi-squared test
+## 
+## data:  specific.set
+## X-squared = 3.7713, df = 4, p-value = 0.4378</code></pre>
+<pre class="r"><code>assoc(t(specific.set), shade=TRUE,labeling_args = list(abbreviate_labs = c(6, 9)))</code></pre>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/cell_spec_TT-1.png" width="672" /></p>
+<pre class="r"><code>rm(sig.gs, gene.sets, gene.sets.hg, specific.set)</code></pre>
+</div>
+<div id="ct-vs-cc-3" class="section level3">
+<h3>CT vs CC</h3>
+<pre class="r"><code>sig.gs &lt;- snpDMgenes_CT
+
+# get gene sets
+gene.sets &lt;- lapply(sig.gs, function(l){dplyr::select(l, mgi_name)})
+
+gene.sets.hg &lt;- list()
+for (s in names(sig.gs)) {
+    gene.sets.hg[[s]] = getLDS(attributes = c(&quot;mgi_symbol&quot;), filters = &quot;mgi_symbol&quot;, 
+                              values = sig.gs[[s]]$mgi_name, mart = mouse,
+                              attributesL = c(&quot;hgnc_symbol&quot;), martL = human, uniqueRows=T)$HGNC.symbol
+
+}
+
+# Number of marker genes for each cell type in each gene set
+specific.set &lt;- sapply(sets, function(s) {
+  sapply(cell.types, function(ct) length(intersect(hum.specific[[ct]]$gene, gene.sets.hg[[s]])), USE.NAMES=T)
+})
+
+print(specific.set)</code></pre>
+<pre><code>##                  hypo hyper
+## Astroctyes         21    15
+## Endothelial         9    16
+## Microglia           5     7
+## Neurons            11    19
+## Oligodendrocytes   10    10</code></pre>
+<pre class="r"><code>chisq.test(specific.set)</code></pre>
+<pre><code>## 
+##  Pearson&#39;s Chi-squared test
+## 
+## data:  specific.set
+## X-squared = 4.4787, df = 4, p-value = 0.3451</code></pre>
+<pre class="r"><code>assoc(t(specific.set), shade=TRUE,labeling_args = list(abbreviate_labs = c(6, 9)))</code></pre>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/cell_spec_CT-1.png" width="672" /></p>
+<pre class="r"><code>rm(sig.gs, gene.sets, gene.sets.hg, specific.set)</code></pre>
 </div>
 </div>
 <div id="output" class="section level2">
 <h2>Output</h2>
-<p>Saving differential methylation objects as RDS for subsequent analyses.</p>
+<p>Saving differential methylation objects and kegg annotations as RDS for subsequent analyses. Saving lists of significantly methylated sites and their genes as csv.</p>
 <pre class="r"><code>saveRDS(diffM_TT, file=&quot;output/RRBS_Pilot/3_Differential_Methylation/diffM_TT.RDS&quot;)
-saveRDS(diffM_CT, file=&quot;output/RRBS_Pilot/3_Differential_Methylation/diffM_CT.RDS&quot;)</code></pre>
+saveRDS(diffM_CT, file=&quot;output/RRBS_Pilot/3_Differential_Methylation/diffM_CT.RDS&quot;)
+
+write_csv(snpDMgenes_TT[[1]], file = &quot;output/RRBS_Pilot/3_Differential_Methylation/snpDMgenes_TT.csv&quot;)
+write_csv(snpDMgenes_TT[[2]], file = &quot;output/RRBS_Pilot/3_Differential_Methylation/snpDMgenes_TT.csv&quot;, append=TRUE)
+write_csv(snpDMgenes_CT[[1]], file = &quot;output/RRBS_Pilot/3_Differential_Methylation/snpDMgenes_CT.csv&quot;)
+write_csv(snpDMgenes_CT[[2]], file = &quot;output/RRBS_Pilot/3_Differential_Methylation/snpDMgenes_CT.csv&quot;, append=TRUE)
+
+saveRDS(kegg_anno_TT, file=&quot;output/RRBS_Pilot/3_Differential_Methylation/kegg_anno_TT.RDS&quot;)
+saveRDS(kegg_anno_CT, file=&quot;output/RRBS_Pilot/3_Differential_Methylation/kegg_anno_CT.RDS&quot;)</code></pre>
 </div>
 
 
