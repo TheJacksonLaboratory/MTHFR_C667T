@@ -441,21 +441,15 @@ knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = TRUE)</code></pre>
   library(tidyverse)
   library(synapser)
   library(DESeq2)
+  library(&quot;pheatmap&quot;)
   })</code></pre>
 <div id="input" class="section level2">
 <h2>Input</h2>
 <p>Read sample metadata and raw counts.<br />
 Sort everything by sample ID.<br />
-Filter out genes that have less than 100x reads total.</p>
+Filter out genes that have less than 10x reads total.</p>
 <pre class="r"><code># read sample info
 meta &lt;- readRDS(&quot;output/RNAseq/1_Processing_QC/samplesheet_meta.RDS&quot;)
-
-# get mapping between pipeline sample id and original sample id
-idkey &lt;- read_csv(&quot;output/RNAseq/1_Processing_QC/nf_rnaseq_output/pipeline_info/samplesheet.valid.csv&quot;) 
-idkey$sample &lt;- sub(&quot;_T1&quot;, &quot;&quot;, idkey$sample)
-idkey$sample_id &lt;- sub(&quot;(\\d+)_R1.fastq.gz&quot;, &quot;\\1&quot;, basename(idkey$fastq_1))
-idkey &lt;- idkey[,c(&quot;sample&quot;, &quot;sample_id&quot;)] %&gt;%
-  arrange(sample_id)
 
 # read raw counts
 ctsfile &lt;- &quot;output/RNAseq/1_Processing_QC/nf_rnaseq_output/star_rsem/rsem.merged.gene_counts.tsv&quot;
@@ -466,17 +460,13 @@ counts &lt;- read_tsv(ctsfile) %&gt;%
   as.matrix()
 
 # replace pipeline sample id with original sample id
-counts &lt;- counts[,idkey$sample]
-colnames(counts) &lt;- idkey$sample_id
-# Filter out genes that have less than 100x reads total
-counts &lt;- counts[rowSums(counts) &gt;100,]</code></pre>
+counts &lt;- counts[,meta$samplesheet]
+colnames(counts) &lt;- meta$sample_id</code></pre>
 </div>
-<div id="deseq-objects-and-results" class="section level2 tabset tabset-fade tabset-pills">
+<div id="deseq-objects-and-results" class="section level2">
 <h2>DESeq objects and results</h2>
-<p>For each combination of sex (M,F) and age (6,18) we compare CT to CC and TT to CC.<br />
-Genes with p-adj &lt; 0.1 are in blue.</p>
-<pre class="r"><code>#grp &lt;- unique(meta$group[meta$genotype!=&quot;CC&quot;])
-grp &lt;- meta %&gt;%
+<p>For each combination of sex (M,F) and age (6,18) we compare CT to CC and TT to CC.</p>
+<pre class="r"><code>grp &lt;- meta %&gt;%
   filter(genotype!=&quot;CC&quot;) %&gt;%
   distinct(genotype, sex, age)
 
@@ -496,15 +486,45 @@ for (i in 1:nrow(grp)) {
   cts &lt;- counts[, rownames(coldata)]
 
   dds &lt;- DESeqDataSetFromMatrix(cts, coldata, design = ~ genotype)
+  dds &lt;- dds[rowSums(counts(dds)) &gt; 10,]
   dds$genotype &lt;- relevel(dds$genotype, ref = &quot;CC&quot;)
  
-  ddsL[[gr]] &lt;- dds &lt;- DESeq(dds)
+  ddsL[[gr]] &lt;- dds &lt;- DESeq(dds) # differential expression
+ 
   res &lt;- results(dds)
   res &lt;- res[order(res),]
   de_resL[[gr]] &lt;- res
   
   rm(gt, sx, ag, coldata, cts, dds, res)
 }</code></pre>
+</div>
+<div id="sample-exploration" class="section level2">
+<h2>Sample exploration</h2>
+<p>Using variance stabilizing transformation for visualization. There is great separation between male and female. In females there is separation of age, but not in males. There is no separation at all between genotypes.</p>
+<pre class="r"><code>coldata &lt;- meta %&gt;%
+  select(sample_id, genotype, sex, age) %&gt;%
+  mutate(age=as.numeric(age)) %&gt;%
+  column_to_rownames(&quot;sample_id&quot;)
+
+dds &lt;- DESeqDataSetFromMatrix(counts, coldata, design = ~ genotype)
+dds &lt;- dds[rowSums(counts(dds)) &gt; 10,]
+dds$genotype &lt;- relevel(dds$genotype, ref = &quot;CC&quot;)
+vsd &lt;- vst(dds, blind=FALSE)
+
+pcaData &lt;- plotPCA(vsd, intgroup=c(&quot;genotype&quot;, &quot;sex&quot;, &quot;age&quot;), returnData=TRUE)
+pcaData$age &lt;- factor(pcaData$age)
+percentVar &lt;- round(100 * attr(pcaData, &quot;percentVar&quot;))
+ggplot(pcaData, aes(x=PC1,y=PC2)) + 
+  geom_point(aes(shape=sex, color=genotype, size=age)) +
+  scale_size_discrete(range=c(3,1.5)) +
+  xlab(paste0(&quot;PC1: &quot;,percentVar[1],&quot;% variance&quot;)) +
+  ylab(paste0(&quot;PC2: &quot;,percentVar[2],&quot;% variance&quot;)) + 
+  coord_fixed()</code></pre>
+<p><img src="RNAseq_2_Differential_Expression_files/figure-html/sample_exp-1.png" width="672" /></p>
+</div>
+<div id="differential-expression" class="section level2 tabset tabset-fade tabset-pills">
+<h2>Differential expression</h2>
+<p>Genes with p-adj &lt; 0.1 are in blue.</p>
 <pre class="r"><code>for(gr in names(de_resL)){
   cat(&quot;### &quot;, gr ,&quot;\n&quot;)
   res &lt;- de_resL[[gr]]

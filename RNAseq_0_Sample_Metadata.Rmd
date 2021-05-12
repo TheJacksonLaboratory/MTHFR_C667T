@@ -28,16 +28,10 @@ meta <- read_csv("data/RNAseq/RNAseq_sample_metadata.csv", col_types = cols(.def
          sample_id = str_pad(tag_id, 5, pad = "0")) %>%
   arrange(sample_id)
 
-# add treatment vector for methylKit operations
-meta <- left_join(meta,
-              data.frame(treatment=0:11, group=unique(meta$group)),
-              by="group")
-
 meta %>% 
   group_by(sex, age, genotype) %>%
   summarise(n=n())
 
-saveRDS(meta, file="output/RNAseq/sample_meta.RDS")
 write_csv(meta, file="output/RNAseq/RNAseq_sample_meta.csv")
 
 ```

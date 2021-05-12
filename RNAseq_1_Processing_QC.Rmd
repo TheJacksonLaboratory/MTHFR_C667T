@@ -22,7 +22,8 @@ suppressPackageStartupMessages({
 ```
 
 ```{r metadata}
-meta <- readRDS("output/RNAseq/sample_meta.RDS") %>% arrange(genotype,age,sex)
+meta <- read_csv("output/RNAseq/RNAseq_sample_meta.csv", col_types = cols(.default = "c")) %>% 
+  arrange(genotype,age,sex)
 ```
 
 ## Linking input fastq files

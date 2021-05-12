@@ -18,18 +18,26 @@ knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = TRUE)
 suppressPackageStartupMessages({
   library(tidyverse)
   library(synapser)
-  library(DESeq2)
-  library("pheatmap")
-  })
+  library(limma)
+  library(Glimma)
+  library(edgeR)
+  library(Mus.musculus)  })
 ```
 
 ## Input
 Read sample metadata and raw counts.  
 Sort everything by sample ID.  
-Filter out genes that have less than 10x reads total.
+Filter out genes that have less than 100x reads total.
 ```{r}
 # read sample info
 meta <- readRDS("output/RNAseq/1_Processing_QC/samplesheet_meta.RDS")
+
+# get mapping between pipeline sample id and original sample id
+idkey <- read_csv("output/RNAseq/1_Processing_QC/nf_rnaseq_output/pipeline_info/samplesheet.valid.csv") 
+idkey$sample <- sub("_T1", "", idkey$sample)
+idkey$sample_id <- sub("(\\d+)_R1.fastq.gz", "\\1", basename(idkey$fastq_1))
+idkey <- idkey[,c("sample", "sample_id")] %>%
+  arrange(sample_id)
 
 # read raw counts
 ctsfile <- "output/RNAseq/1_Processing_QC/nf_rnaseq_output/star_rsem/rsem.merged.gene_counts.tsv"
@@ -40,13 +48,17 @@ counts <- read_tsv(ctsfile) %>%
   as.matrix()
 
 # replace pipeline sample id with original sample id
-counts <- counts[,meta$samplesheet]
-colnames(counts) <- meta$sample_id
+counts <- counts[,idkey$sample]
+colnames(counts) <- idkey$sample_id
+# Filter out genes that have less than 100x reads total
+counts <- counts[rowSums(counts) >100,]
 ```
 
-## DESeq objects and results
-For each combination of sex (M,F) and age (6,18) we compare CT to CC and TT to CC.
+## DESeq objects and results {.tabset .tabset-fade .tabset-pills}
+For each combination of sex (M,F) and age (6,18) we compare CT to CC and TT to CC.  
+Genes with p-adj < 0.1 are in blue.
 ```{r deseq_obj}
+#grp <- unique(meta$group[meta$genotype!="CC"])
 grp <- meta %>%
   filter(genotype!="CC") %>%
   distinct(genotype, sex, age)
@@ -67,11 +79,9 @@ for (i in 1:nrow(grp)) {
   cts <- counts[, rownames(coldata)]
 
   dds <- DESeqDataSetFromMatrix(cts, coldata, design = ~ genotype)
-  dds <- dds[rowSums(counts(dds)) > 10,]
   dds$genotype <- relevel(dds$genotype, ref = "CC")
  
-  ddsL[[gr]] <- dds <- DESeq(dds) # differential expression
- 
+  ddsL[[gr]] <- dds <- DESeq(dds)
   res <- results(dds)
   res <- res[order(res),]
   de_resL[[gr]] <- res
@@ -80,34 +90,7 @@ for (i in 1:nrow(grp)) {
 }
 ```
 
-## Sample exploration
-Using variance stabilizing transformation for visualization.
-There is great separation between male and female. In females there is separation of age, but not in males. There is no separation at all between genotypes.
-```{r sample_exp}
-coldata <- meta %>%
-  select(sample_id, genotype, sex, age) %>%
-  mutate(age=as.numeric(age)) %>%
-  column_to_rownames("sample_id")
-
-dds <- DESeqDataSetFromMatrix(counts, coldata, design = ~ genotype)
-dds <- dds[rowSums(counts(dds)) > 10,]
-dds$genotype <- relevel(dds$genotype, ref = "CC")
-vsd <- vst(dds, blind=FALSE)
-
-pcaData <- plotPCA(vsd, intgroup=c("genotype", "sex", "age"), returnData=TRUE)
-pcaData$age <- factor(pcaData$age)
-percentVar <- round(100 * attr(pcaData, "percentVar"))
-ggplot(pcaData, aes(x=PC1,y=PC2)) + 
-  geom_point(aes(shape=sex, color=genotype, size=age)) +
-  scale_size_discrete(range=c(3,1.5)) +
-  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
-  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
-  coord_fixed()
-```
-
-## Differential expression {.tabset .tabset-fade .tabset-pills}
-Genes with p-adj < 0.1 are in blue.
-```{r deseq_res, results='asis'}
+```{r, deseq_res, results='asis', cache=TRUE}
 for(gr in names(de_resL)){
   cat("### ", gr ,"\n")
   res <- de_resL[[gr]]
