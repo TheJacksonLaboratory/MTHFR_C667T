@@ -53,7 +53,7 @@ output:
     toc_float: yes
     theme: cerulean
     highlight: textmate
-    #keep_md: true
+    keep_md: true
 
 
 

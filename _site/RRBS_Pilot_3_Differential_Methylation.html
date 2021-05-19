@@ -11,7 +11,7 @@
 
 <meta name="author" content="Annat Haber" />
 
-<meta name="date" content="2021-05-07" />
+<meta name="date" content="2021-05-19" />
 
 <title>RRBS Pilot Differential Methylation Annotation</title>
 
@@ -431,7 +431,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">RRBS Pilot Differential Methylation Annotation</h1>
 <h4 class="author">Annat Haber</h4>
-<h4 class="date">2021-05-07</h4>
+<h4 class="date">2021-05-19</h4>
 
 </div>
 
@@ -519,7 +519,7 @@ snpDMgenes_TT &lt;- list(&quot;hypo&quot;= snpDMgenes %&gt;%
 rm(diffM, snp.gr, snpDMgenes, hits, overlap)</code></pre>
 <pre class="r"><code>diffMethPerChr(diffM_TT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)
 diffMethPerChr(diffM_TT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)</code></pre>
-<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/diffM_TT_plot-1.png" width="672" /></p>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/diffM_TT_plot-1.png" /><!-- --></p>
 </div>
 <div id="ct-vs-cc" class="section level3">
 <h3>CT vs CC</h3>
@@ -564,7 +564,7 @@ snpDMgenes_CT &lt;- list(&quot;hypo&quot;= snpDMgenes %&gt;%
 rm(diffM, snp.gr, snpDMgenes, hits, overlap)</code></pre>
 <pre class="r"><code>diffMethPerChr(diffM_CT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)
 diffMethPerChr(diffM_CT, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)</code></pre>
-<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/diffM_CT_plot-1.png" width="672" /></p>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/diffM_CT_plot-1.png" /><!-- --></p>
 </div>
 </div>
 <div id="gene-parts-annotation" class="section level2 tabset tabset-fade tabset-pills">
@@ -697,7 +697,7 @@ for (gs in names(sig.gs.ez)) {
   kegg_anno_TT[[gs]] &lt;- anno
   rm(anno)
   }</code></pre>
-<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/kegg_annotation_TT-1.png" width="960" /><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/kegg_annotation_TT-2.png" width="960" /></p>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/kegg_annotation_TT-1.png" /><!-- --><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/kegg_annotation_TT-2.png" /><!-- --></p>
 <pre class="r"><code>rm(sig.gs, sig.gs.ez)</code></pre>
 </div>
 <div id="ct-vs-cc-2" class="section level3">
@@ -731,7 +731,7 @@ for (gs in names(sig.gs.ez)) {
   kegg_anno_CT[[gs]] &lt;- anno
   rm(anno)
   }</code></pre>
-<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/kegg_annotation_CT-1.png" width="960" /><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/kegg_annotation_CT-2.png" width="960" /></p>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/kegg_annotation_CT-1.png" /><!-- --><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/kegg_annotation_CT-2.png" /><!-- --></p>
 <pre class="r"><code>rm(sig.gs, sig.gs.ez)</code></pre>
 </div>
 </div>
@@ -779,19 +779,19 @@ specific.set &lt;- sapply(sets, function(s) {
 
 print(specific.set)</code></pre>
 <pre><code>##                  hypo hyper
-## Astroctyes         37    12
-## Endothelial        15    12
-## Microglia          17     7
-## Neurons            30    16
+## Astroctyes         37    13
+## Endothelial        15    13
+## Microglia          17     6
+## Neurons            30    17
 ## Oligodendrocytes   16    10</code></pre>
 <pre class="r"><code>chisq.test(specific.set)</code></pre>
 <pre><code>## 
 ##  Pearson&#39;s Chi-squared test
 ## 
 ## data:  specific.set
-## X-squared = 3.7713, df = 4, p-value = 0.4378</code></pre>
+## X-squared = 4.3296, df = 4, p-value = 0.3632</code></pre>
 <pre class="r"><code>assoc(t(specific.set), shade=TRUE,labeling_args = list(abbreviate_labs = c(6, 9)))</code></pre>
-<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/cell_spec_TT-1.png" width="672" /></p>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/cell_spec_TT-1.png" /><!-- --></p>
 <pre class="r"><code>rm(sig.gs, gene.sets, gene.sets.hg, specific.set)</code></pre>
 </div>
 <div id="ct-vs-cc-3" class="section level3">
@@ -818,17 +818,17 @@ print(specific.set)</code></pre>
 <pre><code>##                  hypo hyper
 ## Astroctyes         21    15
 ## Endothelial         9    16
-## Microglia           5     7
+## Microglia           5     6
 ## Neurons            11    19
-## Oligodendrocytes   10    10</code></pre>
+## Oligodendrocytes   10     8</code></pre>
 <pre class="r"><code>chisq.test(specific.set)</code></pre>
 <pre><code>## 
 ##  Pearson&#39;s Chi-squared test
 ## 
 ## data:  specific.set
-## X-squared = 4.4787, df = 4, p-value = 0.3451</code></pre>
+## X-squared = 4.8949, df = 4, p-value = 0.2983</code></pre>
 <pre class="r"><code>assoc(t(specific.set), shade=TRUE,labeling_args = list(abbreviate_labs = c(6, 9)))</code></pre>
-<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/cell_spec_CT-1.png" width="672" /></p>
+<p><img src="RRBS_Pilot_3_Differential_Methylation_files/figure-html/cell_spec_CT-1.png" /><!-- --></p>
 <pre class="r"><code>rm(sig.gs, gene.sets, gene.sets.hg, specific.set)</code></pre>
 </div>
 </div>

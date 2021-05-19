@@ -11,7 +11,7 @@
 
 <meta name="author" content="Annat Haber" />
 
-<meta name="date" content="2021-05-07" />
+<meta name="date" content="2021-05-19" />
 
 <title>MTHFR RRBS_Pilot Exploratory Analysis</title>
 
@@ -431,7 +431,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">MTHFR RRBS_Pilot Exploratory Analysis</h1>
 <h4 class="author">Annat Haber</h4>
-<h4 class="date">2021-05-07</h4>
+<h4 class="date">2021-05-19</h4>
 
 </div>
 
@@ -459,7 +459,7 @@ meta &lt;- readRDS(file = &quot;output/RRBS_Pilot/sample_meta.RDS&quot;)</code><
 <h3>PCA</h3>
 <pre class="r"><code>pc &lt;- prcomp(site_meth, center = TRUE)
 plot(pc)</code></pre>
-<p><img src="RRBS_Pilot_2_Exploratory_Analysis_files/figure-html/pattern_withOutliers-1.png" width="672" /></p>
+<p><img src="RRBS_Pilot_2_Exploratory_Analysis_files/figure-html/pattern_withOutliers-1.png" /><!-- --></p>
 <pre class="r"><code>df &lt;- left_join(dplyr::select(meta, age, genotype, sample_id),
                 as_tibble(pc$x[,1:2], rownames = &quot;sample_id&quot;),
                 by=&quot;sample_id&quot;)
@@ -469,7 +469,7 @@ plot(pc)</code></pre>
 ggplot(df, aes(x=PC1,y=PC2)) + 
   geom_point(aes(color=genotype, size=age)) +
   scale_size_discrete(range=c(3,1.5)) </code></pre>
-<p><img src="RRBS_Pilot_2_Exploratory_Analysis_files/figure-html/pattern_withOutliers-2.png" width="672" /></p>
+<p><img src="RRBS_Pilot_2_Exploratory_Analysis_files/figure-html/pattern_withOutliers-2.png" /><!-- --></p>
 <pre class="r"><code>#+
 #  geom_text(data=outliers, aes(label=sample_id), vjust = &quot;inward&quot;,  hjust = -0.5)</code></pre>
 </div>
@@ -491,7 +491,7 @@ Heatmap(df,
         col = hcl.colors(12, &quot;YlOrRd&quot;, rev = TRUE),
         top_annotation = ha
         )</code></pre>
-<p><img src="RRBS_Pilot_2_Exploratory_Analysis_files/figure-html/bySite_withOutliers-1.png" width="672" /></p>
+<p><img src="RRBS_Pilot_2_Exploratory_Analysis_files/figure-html/bySite_withOutliers-1.png" /><!-- --></p>
 </div>
 </div>
 <div id="global-methylation" class="section level2 tabset tabset-fade tabset-pills">
@@ -513,14 +513,13 @@ br.df &lt;- meta.gm %&gt;%
    
 model = betareg(global_meth_counts ~ genotype + age, data = br.df)
 emmeans::joint_tests(model)</code></pre>
-<pre><code>##  model term   df1 df2 F.ratio p.value
-##  genotype       1 Inf  18.793 &lt;.0001 
-##  age            1 Inf   0.289 0.5907 
-##  genotype:age   1 Inf   0.287 0.5925</code></pre>
+<pre><code>##  model term df1 df2 F.ratio p.value
+##  genotype     1 Inf  18.793 &lt;.0001 
+##  age          1 Inf   0.289 0.5907</code></pre>
 <pre class="r"><code>ggplot(meta.gm, aes(x=genotype, y=global_meth_counts, color=age)) +
   geom_point() +
   facet_wrap(~ age)</code></pre>
-<p><img src="RRBS_Pilot_2_Exploratory_Analysis_files/figure-html/global_meth_counts_betareg-1.png" width="672" /></p>
+<p><img src="RRBS_Pilot_2_Exploratory_Analysis_files/figure-html/global_meth_counts_betareg-1.png" /><!-- --></p>
 </div>
 <div id="mean-percent" class="section level3">
 <h3>Mean Percent</h3>
@@ -535,14 +534,13 @@ br.df &lt;- meta.gm %&gt;%
    
 model = betareg(global_meth_perc ~ genotype + age, data = br.df)
 emmeans::joint_tests(model)</code></pre>
-<pre><code>##  model term   df1 df2 F.ratio p.value
-##  genotype       1 Inf  29.405 &lt;.0001 
-##  age            1 Inf   0.068 0.7946 
-##  genotype:age   1 Inf   0.068 0.7943</code></pre>
+<pre><code>##  model term df1 df2 F.ratio p.value
+##  genotype     1 Inf  29.405 &lt;.0001 
+##  age          1 Inf   0.068 0.7946</code></pre>
 <pre class="r"><code>ggplot(meta.gm, aes(x=genotype, y=global_meth_perc, color=age)) +
   geom_point() +
   facet_wrap(~ age)</code></pre>
-<p><img src="RRBS_Pilot_2_Exploratory_Analysis_files/figure-html/global_meth_perc_betareg-1.png" width="672" /></p>
+<p><img src="RRBS_Pilot_2_Exploratory_Analysis_files/figure-html/global_meth_perc_betareg-1.png" /><!-- --></p>
 </div>
 </div>
 <div id="output" class="section level2">

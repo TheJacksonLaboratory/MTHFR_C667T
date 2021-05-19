@@ -1,0 +1,356 @@
+---
+title: "RNAseq Differential Expression"
+author: "Annat Haber"
+date: "5/1/2021"
+output:
+  html_document:
+    toc: true
+    code_folding: hide
+    df_print: "kable"
+---
+
+
+```r
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = TRUE)
+```
+
+
+```r
+suppressPackageStartupMessages({
+  library(synapser)
+  library(DESeq2)
+  library(tidyverse)
+ })
+```
+
+## Input
+1. Read sample metadata and raw counts.  
+2. Switch genotypes for two samples based on [the QC](RNAseq_1_Processing_QC):  
+    34158 from TT to CT  
+    34163 from CT to TT  
+3. Sort everything by sample ID.  
+
+```r
+# read sample info
+meta <- readRDS("output/RNAseq/1_Processing_QC/samplesheet_meta.RDS")
+meta$genotype[meta$sample_id=="34158"] <- "CT"
+meta$genotype[meta$sample_id=="34163"] <- "TT"
+meta <- meta %>%
+  arrange(genotype, sex, age)
+
+# read raw counts
+ctsfile <- "output/RNAseq/1_Processing_QC/nf_rnaseq_output/star_rsem/rsem.merged.gene_counts.tsv"
+counts <- read_tsv(ctsfile) %>%
+  dplyr::select(-"transcript_id(s)") %>%
+  column_to_rownames("gene_id") %>%
+  round() %>%
+  as.matrix()
+
+# replace pipeline sample id with original sample id
+counts <- counts[,meta$samplesheet]
+colnames(counts) <- meta$sample_id
+```
+
+## Sample exploration
+Using variance stabilizing transformation for visualization.
+There is great separation between male and female. In females there is separation of age, but not in males. There is no separation at all between genotypes.
+
+```r
+# Modifying plotPCA function to include PC3
+plotPCA = function(object, ntop=500, intgroup)
+{
+# calculate the variance for each gene
+  rv <- rowVars(assay(object))
+  # select the ntop genes by variance
+  select <- order(rv, decreasing=TRUE)[seq_len(min(ntop, length(rv)))]
+  # perform a PCA on the data in assay(x) for the selected genes
+  pca <- prcomp(t(assay(object)[select,]))
+  # the contribution to the total variance for each component
+  percentVar <- pca$sdev^2 / sum( pca$sdev^2 )
+  
+  intgroup.df <- as.data.frame(colData(object)[, intgroup, drop=FALSE])
+  # add the intgroup factors together to create a new grouping factor
+  group <- if (length(intgroup) > 1) {
+    factor(apply( intgroup.df, 1, paste, collapse=":"))
+  } else {
+    colData(object)[[intgroup]]
+  }
+  # assemble the data for the plot
+  d <- data.frame(PC1=pca$x[,1], PC2=pca$x[,2], PC3=pca$x[,3], group=group, intgroup.df, name=colnames(object))
+  attr(d, "percentVar") <- percentVar[1:3]
+  return(d)
+}
+```
+
+
+```r
+coldata <- meta %>%
+  dplyr::select(sample_id, genotype, sex, age) %>%
+  mutate(age=as.numeric(age)) %>%
+  column_to_rownames("sample_id")
+
+dds <- DESeqDataSetFromMatrix(counts, coldata, design = ~ genotype)
+dds <- dds[rowSums(counts(dds)) > 10,]
+dds$genotype <- relevel(dds$genotype, ref = "CC")
+vsd <- vst(dds, blind=FALSE)
+
+pcaData <- plotPCA(vsd, intgroup=c("genotype", "sex", "age"))
+pcaData$age <- factor(pcaData$age)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+ggplot(pcaData, aes(x=PC1,y=PC2)) + 
+  geom_point(aes(shape=sex, color=genotype, size=age)) +
+  scale_size_discrete(range=c(1.5,3)) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  coord_fixed()
+ggplot(pcaData, aes(x=PC1,y=PC3)) + 
+  geom_point(aes(shape=sex, color=genotype, size=age)) +
+  scale_size_discrete(range=c(1.5,3)) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC3: ",percentVar[3],"% variance")) + 
+  coord_fixed()
+
+rm(dds)
+```
+
+<img src="RNAseq_2_Differential_Expression_files/figure-html/sample_exp-1.png" width="50%" style="background-color: #9ecff7; padding:1px; display: inline-block;" /><img src="RNAseq_2_Differential_Expression_files/figure-html/sample_exp-2.png" width="50%" style="background-color: #9ecff7; padding:1px; display: inline-block;" />
+
+## Differential expression {.tabset .tabset-fade .tabset-pills}
+### Variant vs WT {.tabset .tabset-fade .tabset-pills}
+For each combination of sex (M,F) and age (6,18) we compare CT to CC and TT to CC.  
+Genes that have less than 10x reads total are filtered out within each comparison.  
+Genes with p-adj < 0.1 are in blue.
+
+```r
+grp <- meta %>%
+  filter(genotype!="CC") %>%
+  distinct(genotype, sex, age)
+
+de_resL <- list()
+sig.genes_gt <- c()
+
+for (i in 1:nrow(grp)) {
+  #print(i)
+  # get genotype, sex, and age for this comparison
+  gt <- grp$genotype[i]
+  sx <- grp$sex[i]
+  ag <- grp$age[i]
+  gr <- paste(gt, sx, ag, sep="_")
+  
+  # get sample_id and grouping factor (genotype) for this comparison
+  coldata <- meta %>%
+    filter(genotype %in% c("CC",gt) & sex == sx & age == ag) %>%
+    dplyr::select(genotype, sample_id) %>%
+    column_to_rownames("sample_id")
+
+  cts <- counts[, rownames(coldata)]
+
+  # DESeq object and analysis
+  dds <- DESeqDataSetFromMatrix(cts, coldata, design = ~ genotype)
+  dds <- dds[rowSums(counts(dds)) > 10,]
+  dds$genotype <- relevel(dds$genotype, ref = "CC")
+  dds <- DESeq(dds) 
+ 
+  # extract DEseq results
+  res <- results(dds)
+  res <- res[order(res),]
+  de_resL[[gr]] <- res
+  
+  # get genes significant at padj < 0.1
+  sig.g <- as.data.frame(res[which(res$padj<0.1),])
+  if (nrow(sig.g) > 0) {
+    sig.g <- cbind(comparison=gr, sig.g) %>%
+      arrange(desc(padj)) %>%
+      rownames_to_column(var='ensembl_gene_id')
+    # add gene symbol
+    ensembl <- biomaRt::useMart("ensembl", dataset="mmusculus_gene_ensembl")
+    mgi_symbol <- biomaRt::getBM(attributes=c('ensembl_gene_id','external_gene_name'),
+             filters = 'ensembl_gene_id',
+             values = sig.g$ensembl_gene_id,
+             mart = ensembl) %>%
+      dplyr::rename("mgi_symbol"="external_gene_name")
+    sig.g <- left_join(sig.g, mgi_symbol, by='ensembl_gene_id')
+    sig.genes_gt <- rbind(sig.genes_gt, sig.g)
+  }
+  
+  rm(gt, sx, ag, coldata, cts, dds, res, sig.g)
+}
+```
+
+
+```r
+for(gr in names(de_resL)){
+  cat("#### ", gr ,"\n")
+  res <- de_resL[[gr]]
+  cat(paste0("Comparing ", gr, " to ", str_replace(gr, "CT|TT", "CC")), "\n")
+  cat(plotMA(res), "\n")
+  #cat("\n", "significant genes:\n", rownames(res)[which(res$padj<0.1)])
+  cat('\n\n')
+}
+```
+
+####  CT_F_18 
+Comparing CT_F_18 to CC_F_18 
+![](RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-1.png)<!-- --> 
+
+
+####  CT_F_6 
+Comparing CT_F_6 to CC_F_6 
+![](RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-2.png)<!-- --> 
+
+
+####  CT_M_18 
+Comparing CT_M_18 to CC_M_18 
+![](RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-3.png)<!-- --> 
+
+
+####  CT_M_6 
+Comparing CT_M_6 to CC_M_6 
+![](RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-4.png)<!-- --> 
+
+
+####  TT_F_18 
+Comparing TT_F_18 to CC_F_18 
+![](RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-5.png)<!-- --> 
+
+
+####  TT_F_6 
+Comparing TT_F_6 to CC_F_6 
+![](RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-6.png)<!-- --> 
+
+
+####  TT_M_18 
+Comparing TT_M_18 to CC_M_18 
+![](RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-7.png)<!-- --> 
+
+
+####  TT_M_6 
+Comparing TT_M_6 to CC_M_6 
+![](RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-8.png)<!-- --> 
+
+```r
+de_resL_gt <- de_resL
+rm(de_resL)
+```
+
+### Old vs Young {.tabset .tabset-fade .tabset-pills}
+
+For each combination of sex (M,F) and genotype (CC, CT, TT) we compare old to young samples (18 vs 6 months).  
+Genes that have less than 10x reads total are filtered out within each comparison.  
+Genes with p-adj < 0.1 are in blue.
+
+```r
+grp <- meta %>%
+  filter(age!="6") %>%
+  distinct(genotype, sex, age)
+
+de_resL <- list()
+sig.genes_age <- c()
+
+for (i in 1:nrow(grp)) {
+  #print(i)
+  # get genotype, sex, and age for this comparison
+  gt <- grp$genotype[i]
+  sx <- grp$sex[i]
+  ag <- grp$age[i]
+  gr <- paste(gt, sx, ag, sep="_")
+  
+  # get sample_id and grouping factor (age) for this comparison
+  coldata <- meta %>%
+    filter(sex == sx & genotype == gt) %>%
+    dplyr::select(age, sample_id) %>%
+    column_to_rownames("sample_id")
+
+  cts <- counts[, rownames(coldata)]
+
+  # DESeq object and analysis
+  dds <- DESeqDataSetFromMatrix(cts, coldata, design = ~ age)
+  dds <- dds[rowSums(counts(dds)) > 10,]
+  dds$age <- relevel(dds$age, ref = "6")
+  dds <- DESeq(dds) # differential expression analysis
+ 
+  # extract DEseq results
+  res <- results(dds)
+  res <- res[order(res),]
+  de_resL[[gr]] <- res
+  
+  # get genes significant at padj < 0.1
+  sig.g <- as.data.frame(res[which(res$padj<0.1),])
+  if (nrow(sig.g) > 0) {
+    sig.g <- cbind(comparison=gr, sig.g) %>%
+      arrange(desc(padj)) %>%
+      rownames_to_column(var='ensembl_gene_id')
+    # add gene symbol
+    ensembl <- biomaRt::useMart("ensembl", dataset="mmusculus_gene_ensembl")
+    mgi_symbol <- biomaRt::getBM(attributes=c('ensembl_gene_id','external_gene_name'),
+             filters = 'ensembl_gene_id',
+             values = sig.g$ensembl_gene_id,
+             mart = ensembl) %>%
+      dplyr::rename("mgi_symbol"="external_gene_name")
+    sig.g <- left_join(sig.g, mgi_symbol, by='ensembl_gene_id')
+    sig.genes_age <- rbind(sig.genes_age, sig.g)
+  }
+
+  rm(gt, sx, ag, coldata, cts, dds, res, sig.g)
+}
+```
+
+
+```r
+for(gr in names(de_resL)){
+  cat("#### ", gr ,"\n")
+  res <- de_resL[[gr]]
+  cat(paste0("Comparing ", gr, " to ", str_replace(gr, "18", "6")), "\n")
+  cat(plotMA(res), "\n")
+  #cat("\n", "significant genes:\n", rownames(res)[which(res$padj<0.1)])
+  cat('\n\n')
+}
+```
+
+####  CC_F_18 
+Comparing CC_F_18 to CC_F_6 
+![](RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-1.png)<!-- --> 
+
+
+####  CC_M_18 
+Comparing CC_M_18 to CC_M_6 
+![](RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-2.png)<!-- --> 
+
+
+####  CT_F_18 
+Comparing CT_F_18 to CT_F_6 
+![](RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-3.png)<!-- --> 
+
+
+####  CT_M_18 
+Comparing CT_M_18 to CT_M_6 
+![](RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-4.png)<!-- --> 
+
+
+####  TT_F_18 
+Comparing TT_F_18 to TT_F_6 
+![](RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-5.png)<!-- --> 
+
+
+####  TT_M_18 
+Comparing TT_M_18 to TT_M_6 
+![](RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-6.png)<!-- --> 
+
+```r
+de_resL_age <- de_resL
+rm(de_resL)
+```
+
+## Output
+
+```r
+write_csv(sig.genes_gt,
+            file="output/RNAseq/2_Differential_Expression/sig_genes_padj01_variantVSwt.csv")
+
+write_csv(sig.genes_age, 
+            file="output/RNAseq/2_Differential_Expression/sig_genes_padj01_18vs6.csv")
+
+saveRDS(de_resL_gt, file="output/RNAseq/2_Differential_Expression/sig.genes_gt.RDS")
+saveRDS(de_resL_age, file="output/RNAseq/2_Differential_Expression/sig.genes_age.RDS")
+```

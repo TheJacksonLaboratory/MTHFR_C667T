@@ -11,7 +11,7 @@
 
 <meta name="author" content="Annat Haber" />
 
-<meta name="date" content="2021-05-07" />
+<meta name="date" content="2021-05-19" />
 
 <title>MTHFR RRBS Exploratory Analysis</title>
 
@@ -431,7 +431,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">MTHFR RRBS Exploratory Analysis</h1>
 <h4 class="author">Annat Haber</h4>
-<h4 class="date">2021-05-07</h4>
+<h4 class="date">2021-05-19</h4>
 
 </div>
 
@@ -465,7 +465,7 @@ meta &lt;- left_join(meta, hmc, by=&quot;tag_id&quot;)</code></pre>
 <h4>PCA</h4>
 <pre class="r"><code>pc &lt;- prcomp(site_meth, center = TRUE)
 plot(pc)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern_withOutliers-1.png" width="672" /></p>
+<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern_withOutliers-1.png" /><!-- --></p>
 <pre class="r"><code>df &lt;- left_join(dplyr::select(meta, age, sex, genotype, sample_id),
                 as_tibble(pc$x[,1:2], rownames = &quot;sample_id&quot;),
                 by=&quot;sample_id&quot;)
@@ -476,7 +476,7 @@ ggplot(df, aes(x=PC1,y=PC2)) +
   geom_point(aes(shape=sex, color=genotype, size=age)) +
   scale_size_discrete(range=c(3,1.5)) +
   geom_text(data=outliers, aes(label=sample_id), vjust = &quot;inward&quot;,  hjust = &quot;inward&quot;)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern_withOutliers-2.png" width="672" /></p>
+<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern_withOutliers-2.png" /><!-- --></p>
 <pre class="r"><code>rm(df)</code></pre>
 </div>
 </div>
@@ -488,14 +488,14 @@ meta.wou &lt;- filter(meta, !sample_id %in% outliers$sample_id)</code></pre>
 <h4>PCA</h4>
 <pre class="r"><code>pc &lt;- prcomp(site_meth.wou, center = TRUE)
 plot(pc)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern__noOutliers-1.png" width="672" /></p>
+<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern__noOutliers-1.png" /><!-- --></p>
 <pre class="r"><code>left_join(select(meta.wou, age, sex, genotype, sample_id),
                 as_tibble(pc$x[,1:2], rownames = &quot;sample_id&quot;),
                 by=&quot;sample_id&quot;) %&gt;%
   ggplot(aes(x=PC1,y=PC2)) + 
   geom_point(aes(shape=sex, color=genotype, size=age)) +
   scale_size_discrete(range=c(3,1.5)) </code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern__noOutliers-2.png" width="672" /></p>
+<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern__noOutliers-2.png" /><!-- --></p>
 <pre class="r"><code>#+
 #  geom_text(data=outliers, aes(label=sample_id), vjust = -0.5,  hjust = -0.5)</code></pre>
 </div>
@@ -521,18 +521,14 @@ meta.gm &lt;-  left_join(meta, global_meth_counts, by=&quot;sample_id&quot;)</co
    
 model = betareg(global_meth_counts ~ genotype + age + sex, data = br.df)
 emmeans::joint_tests(model)</code></pre>
-<pre><code>##  model term       df1 df2 F.ratio p.value
-##  genotype           1 Inf   0.235 0.6278 
-##  age                1 Inf   0.550 0.4582 
-##  sex                1 Inf   0.315 0.5744 
-##  genotype:age       1 Inf   0.162 0.6873 
-##  genotype:sex       1 Inf   0.132 0.7160 
-##  age:sex            1 Inf   0.202 0.6531 
-##  genotype:age:sex   1 Inf   0.107 0.7442</code></pre>
+<pre><code>##  model term df1 df2 F.ratio p.value
+##  genotype     1 Inf   0.235 0.6278 
+##  age          1 Inf   0.550 0.4582 
+##  sex          1 Inf   0.315 0.5744</code></pre>
 <pre class="r"><code>ggplot(meta.gm, aes(x=genotype, y=global_meth_counts, color=age)) +
   geom_point() +
   facet_wrap(~ sex)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/global_meth_counts_betareg-1.png" width="672" /></p>
+<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/global_meth_counts_betareg-1.png" /><!-- --></p>
 </div>
 <div id="mean-percent" class="section level3">
 <h3>Mean Percent</h3>
@@ -548,18 +544,14 @@ br.df &lt;- meta.gm %&gt;%
    
 model = betareg(global_meth_perc ~ genotype + age + sex, data = br.df)
 emmeans::joint_tests(model)</code></pre>
-<pre><code>##  model term       df1 df2 F.ratio p.value
-##  genotype           1 Inf   0.221 0.6379 
-##  age                1 Inf   1.159 0.2818 
-##  sex                1 Inf   0.027 0.8694 
-##  genotype:age       1 Inf   0.188 0.6645 
-##  genotype:sex       1 Inf   0.024 0.8761 
-##  age:sex            1 Inf   0.027 0.8707 
-##  genotype:age:sex   1 Inf   0.024 0.8770</code></pre>
+<pre><code>##  model term df1 df2 F.ratio p.value
+##  genotype     1 Inf   0.221 0.6379 
+##  age          1 Inf   1.159 0.2818 
+##  sex          1 Inf   0.027 0.8694</code></pre>
 <pre class="r"><code>ggplot(meta.gm, aes(x=genotype, y=global_meth_perc, color=age)) +
   geom_point() +
   facet_wrap(~ sex)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/global_meth_percent_betareg-1.png" width="672" /></p>
+<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/global_meth_percent_betareg-1.png" /><!-- --></p>
 </div>
 <div id="correlation-with-homocysteine-level" class="section level3">
 <h3>Correlation with homocysteine level</h3>

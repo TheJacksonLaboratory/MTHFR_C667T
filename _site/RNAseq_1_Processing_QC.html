@@ -11,7 +11,7 @@
 
 <meta name="author" content="Annat Haber" />
 
-<meta name="date" content="2021-05-07" />
+<meta name="date" content="2021-05-19" />
 
 <title>RNAseq Processing and QC</title>
 
@@ -431,7 +431,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">RNAseq Processing and QC</h1>
 <h4 class="author">Annat Haber</h4>
-<h4 class="date">2021-05-07</h4>
+<h4 class="date">2021-05-19</h4>
 
 </div>
 
@@ -442,7 +442,8 @@ knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = TRUE)</code></pre>
   library(tidyverse)
   library(synapser)
 })</code></pre>
-<pre class="r"><code>meta &lt;- readRDS(&quot;output/RNAseq/sample_meta.RDS&quot;) %&gt;% arrange(genotype,age,sex)</code></pre>
+<pre class="r"><code>meta &lt;- read_csv(&quot;output/RNAseq/RNAseq_sample_meta.csv&quot;, col_types = cols(.default = &quot;c&quot;)) %&gt;% 
+  arrange(genotype,age,sex)</code></pre>
 <div id="linking-input-fastq-files" class="section level2">
 <h2>Linking input fastq files</h2>
 <p>Creating symbolic links to the original fastq files.<br />
@@ -516,6 +517,7 @@ file.copy(from = &quot;output/RNAseq/1_Processing_QC/samplesheet.csv&quot;,
 </div>
 <div id="qc-genotypes" class="section level2">
 <h2>QC: Genotypes</h2>
+<p>Extracting genotypes from fastq files to validate metadata</p>
 <pre class="bash"><code>#singularity pull --name ~/bin/bam-readcount shub://jaxreg.jax.org/rit-ci/bam-readcount:v0.8
 #~/bin/bam-readcount $inpath/CC_18_F_R1.sorted.bam 4:148048151-148048151
 
