@@ -11,7 +11,7 @@
 
 <meta name="author" content="Annat Haber" />
 
-<meta name="date" content="2021-05-19" />
+<meta name="date" content="2021-05-20" />
 
 <title>RRBS Pilot Sample Metadata</title>
 
@@ -35,6 +35,7 @@
 <script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <script src="site_libs/navigation-1.1/codefolding.js"></script>
+<script src="site_libs/navigation-1.1/sourceembed.js"></script>
 <link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
 <link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
@@ -62,6 +63,11 @@ if (window.hljs) {
 
 
 
+<style type="text/css">
+#rmd-source-code {
+  display: none;
+}
+</style>
 
 
 
@@ -363,7 +369,10 @@ div.tocify {
       <a href="RRBS_2_Exploratory_Analysis.html">Exploratory Analysis</a>
     </li>
     <li>
-      <a href="RRBS_3_Differential_Methylation.html">Differential Methylation</a>
+      <a href="RRBS_3_Differential_Methylation_gt.html">Differential Methylation; pooled sex and age</a>
+    </li>
+    <li>
+      <a href="RRBS_3_Differential_Methylation_gtsxag.html">Differential Methylation; separate sex and age</a>
     </li>
     <li class="dropdown-header">Methylation by Position</li>
   </ul>
@@ -424,6 +433,8 @@ div.tocify {
 <ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
 <li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
 <li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+<li role="separator" class="divider"></li>
+<li><a id="rmd-download-source" href="#">Download Rmd</a></li>
 </ul>
 </div>
 
@@ -431,7 +442,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">RRBS Pilot Sample Metadata</h1>
 <h4 class="author">Annat Haber</h4>
-<h4 class="date">2021-05-19</h4>
+<h4 class="date">2021-05-20</h4>
 
 </div>
 
@@ -513,6 +524,7 @@ provenance &lt;- Activity(executed = &quot;https://github.com/TheJacksonLaborato
 file &lt;- synStore(file, activity=provenance)</code></pre>
 <p>```</p>
 
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiUlJCUyBQaWxvdCBTYW1wbGUgTWV0YWRhdGEiCmF1dGhvcjogIkFubmF0IEhhYmVyIgpkYXRlOiAnYHIgU3lzLkRhdGUoKWAnCm91dHB1dDoKICBodG1sX2RvY3VtZW50OgogICAgdG9jOiB0cnVlCiAgICBjb2RlX2ZvbGRpbmc6IGhpZGUKICAgIGRmX3ByaW50OiAia2FibGUiCi0tLQoKYGBge3Igc2V0dXAsIHdhcm5pbmc9RkFMU0UsIG1lc3NhZ2U9RkFMU0V9CmtuaXRyOjpvcHRzX2tuaXQkc2V0KHJvb3QuZGlyID0gcnByb2pyb290OjpmaW5kX3JzdHVkaW9fcm9vdF9maWxlKCkpCmtuaXRyOjpvcHRzX2NodW5rJHNldChtZXNzYWdlPUZBTFNFLCB3YXJuaW5nPUZBTFNFLCBjYWNoZSA9IEZBTFNFKQpgYGAKCmBgYHtyIGxpYnJhcmllc30Kc3VwcHJlc3NQYWNrYWdlU3RhcnR1cE1lc3NhZ2VzKHsKICBsaWJyYXJ5KHRpZHl2ZXJzZSkKICBsaWJyYXJ5KHN5bmFwc2VyKQp9KQpgYGAKClNhbXBsZSBzaXplIGluY2x1ZGVkIGluIHRoZSBSUkJTIFBpbG90IGFuYWx5c2lzIGJ5IGFnZSBhbmQgZ2Vub3R5cGUuICAKQWxsIHNhbXBsZXMgYXJlIGZlbWFsZS4KYGBge3IgbWV0YWRhdGF9Cm1ldGEgPC0gcmVhZF9jc3YoImRhdGEvUlJCU19QaWxvdC9SUkJTX1BpbG90X3NhbXBsZV9tZXRhZGF0YS5jc3YiLCAKICAgICAgICAgICAgICAgICBjb2xfdHlwZXMgPSBjb2xzKC5kZWZhdWx0ID0gImMiKSkgJT4lCiAgbXV0YXRlKGdyb3VwID0gcGFzdGUoZ2Vub3R5cGUsIGFnZSwgc2VwPSJfIikpICU+JQogIGFycmFuZ2Uoc2FtcGxlX2lkKQoKIyBhZGQgdHJlYXRtZW50IHZlY3RvciBmb3IgbWV0aHlsS2l0IG9wZXJhdGlvbnMKbWV0YSA8LSBsZWZ0X2pvaW4obWV0YSwKICAgICAgICAgICAgICBkYXRhLmZyYW1lKHRyZWF0bWVudD0wOjUsIGdyb3VwPXVuaXF1ZShtZXRhJGdyb3VwKSksCiAgICAgICAgICAgICAgYnk9Imdyb3VwIikKCm1ldGEgJT4lIAogIGdyb3VwX2J5KGFnZSwgZ2Vub3R5cGUpICU+JQogIHN1bW1hcmlzZShuPW4oKSkKCmBgYAoKYGBge3Igb3V0cHV0LCByZXN1bHRzPSdoaWRlJ30Kc2F2ZVJEUyhtZXRhLCBmaWxlPSJvdXRwdXQvUlJCU19QaWxvdC9zYW1wbGVfbWV0YS5SRFMiKQp3cml0ZV9jc3YobWV0YSwgZmlsZT0ib3V0cHV0L1JSQlNfUGlsb3QvUlJCU19QaWxvdF9zYW1wbGVfbWV0YS5jc3YiKQoKc3luTG9naW4oKSAKCmZpbGUgPC0gRmlsZSgib3V0cHV0L1JSQlNfUGlsb3QvUlJCU19QaWxvdF9zYW1wbGVfbWV0YS5jc3YiLAogICAgICAgICAgICAgY29udGVudFR5cGUgPSAidGV4dC9wbGFpbiIsCiAgICAgICAgICAgICBkZXNjcmlwdGlvbiA9ICJSUkJTX1BpbG90IHNhbXBsZSBtZXRhZGF0YSIsCiAgICAgICAgICAgICBwYXJlbnQgPSAic3luMjUxNzQ0ODgiKQpwcm92ZW5hbmNlIDwtIEFjdGl2aXR5KGV4ZWN1dGVkID0gImh0dHBzOi8vZ2l0aHViLmNvbS9UaGVKYWNrc29uTGFib3JhdG9yeS9NVEhGUl9DNjY3VCIpCmZpbGUgPC0gc3luU3RvcmUoZmlsZSwgYWN0aXZpdHk9cHJvdmVuYW5jZSkKYGBgCmBgYA==</div>
 
 
 </div>
@@ -550,6 +562,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
+  window.initializeSourceEmbed("RRBS_Pilot_0_Sample_Metadata.Rmd");
   window.initializeCodeFolding("hide" === "show");
 });
 </script>

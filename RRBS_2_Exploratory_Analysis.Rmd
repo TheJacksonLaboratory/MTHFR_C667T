@@ -31,15 +31,23 @@ suppressPackageStartupMessages({
 ```
 
 ## Input
-Input is percent methylation in each site for each sample (samples x sites matrix), including only sites within CpG context that are covered in all samples with at least 10x coverage. 
+Input is percent methylation in each site for each sample (samples x sites matrix), including only sites within CpG context that are covered in all samples with at least 10x coverage.
+Switching genotypes for two samples based on [the QC](RNAseq_1_Processing_QC):  
+34158 from TT to CT  
+34163 from CT to TT  
 ```{r input}
 site_meth <- readRDS(file = "output/RRBS/1_Processing_QC/persite_meth.RDS")
 # meta
 meta <- readRDS(file = "output/RRBS/sample_meta.RDS")
+meta$genotype[meta$sample_id=="34158"] <- "CT"
+meta$genotype[meta$sample_id=="34163"] <- "TT"
 
 hmc <- read_tsv("data/homocysteine.txt", col_types = cols("c","n"))
 
-meta <- left_join(meta, hmc, by="tag_id")
+meta <- left_join(meta, hmc, by="tag_id") %>%
+  dplyr::select(sample_id, genotype, sex, age, hmc) %>%
+  arrange(genotype, age, sex)
+
 ```
 
 ## Pattern of Methylation {.tabset .tabset-fade .tabset-pills}
@@ -178,14 +186,17 @@ ggplot(meta.gm, aes(x=genotype, y=global_meth_perc, color=age)) +
 
 ```
 
-### Correlation with homocysteine level
-
-```{r hmc, out.width=c('50%', '50%')}
+## Correlation with homocysteine level {.tabset .tabset-fade .tabset-pills}
+### Counts
+```{r hmc_counts}
 ggplot(meta.gm, aes(x = hmc, y = global_meth_counts)) + 
   geom_point(aes(shape=sex, color=genotype, size=age)) +
   scale_size_discrete(range=c(3,1.5)) +
   ggtitle("Counts")
+```
 
+### Mean Percent
+```{r hmc_perc}
 ggplot(meta.gm, aes(x = hmc, y = global_meth_perc)) + 
   geom_point(aes(shape=sex, color=genotype, size=age)) +
   scale_size_discrete(range=c(3,1.5)) +
@@ -194,16 +205,16 @@ ggplot(meta.gm, aes(x = hmc, y = global_meth_perc)) +
 
 
 ## Output
-Uploading sample metadata with their global methylation values to [Synapse](https://www.synapse.org/#!Synapse:syn23573590/wiki/607402)
+Uploading global methylation and homocysteine values to [Synapse](https://www.synapse.org/#!Synapse:syn25834048)
 ```{r output, results='hide'}
-write_csv(meta.gm, file="output/RRBS/2_Exploratory_Analysis/RRBS_meta_globalmeth.csv")
+write_csv(meta.gm, file="output/RRBS/2_Exploratory_Analysis/RRBS_globalmeth_hmc.csv")
 
 # upload meta_global_meth to synapse
 synLogin() 
 
-file <- File("output/RRBS/2_Exploratory_Analysis/RRBS_meta_globalmeth.csv",
+file <- File("output/RRBS/2_Exploratory_Analysis/RRBS_globalmeth_hmc.csv",
              contentType = "text/plain",
-             description = "RRBS sample metadata with their global methylation values",
+             description = "global methylation and homocysteine values",
              parent = "syn25174486")
 
 provenance <- Activity(used = c("syn25174542", "syn25174517"),

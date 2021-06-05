@@ -16,8 +16,8 @@ knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = TRUE)
 
 ```{r libraries}
 suppressPackageStartupMessages({
-  library(tidyverse)
   library(synapser)
+  library(tidyverse)
 })
 ```
 
@@ -100,7 +100,10 @@ file.copy(from = "output/RNAseq/1_Processing_QC/samplesheet.csv",
 3. [Sample list that matches the pipeline's notation](assets/RNAseq_samplesheet.csv)
 
 ## QC: Genotypes
-Extracting genotypes from fastq files to validate metadata
+Extracting genotypes from fastq files to validate metadata.
+These samples seem to be genotyped incorrectly and need to switch:
+34158 from TT to CT  
+34163 from CT to TT  
 ```{bash mpileup, eval=FALSE}
 #singularity pull --name ~/bin/bam-readcount shub://jaxreg.jax.org/rit-ci/bam-readcount:v0.8
 #~/bin/bam-readcount $inpath/CC_18_F_R1.sorted.bam 4:148048151-148048151
@@ -144,13 +147,18 @@ gt7 <- mpgt %>%
 
 ## Output
 Saving
-```{r output}
+```{r output_save}
 saveRDS(meta, file="output/RNAseq/1_Processing_QC/samplesheet_meta.RDS")
 ```
-
-Uploading to [Synapse](https://www.synapse.org/#!Synapse:syn23573590/wiki/607402) as csv file.
-```{r synapse, results='hide'}
+Uploading raw counts to [synapse](https://www.synapse.org/#!Synapse:syn25834044)
+```{r output_synapse, results='hide'}
 synLogin() 
+## variant vs wt
+file <- File("output/RNAseq/1_Processing_QC/nf_rnaseq_output/star_rsem/rsem.merged.gene_counts.tsv",
+             contentType = "text/plain",
+             description = "rsem counts",
+             parent = "syn25174489")
 
-
+provenance <- Activity(used = c("syn25834043"),
+                       executed = "https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RNAseq_1_Processing_QC.Rmd")
 ```

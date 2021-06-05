@@ -11,7 +11,7 @@
 
 <meta name="author" content="Annat Haber" />
 
-<meta name="date" content="2021-05-19" />
+<meta name="date" content="2021-06-04" />
 
 <title>RRBS Sample Metadata</title>
 
@@ -35,6 +35,7 @@
 <script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <script src="site_libs/navigation-1.1/codefolding.js"></script>
+<script src="site_libs/navigation-1.1/sourceembed.js"></script>
 <link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
 <link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
@@ -62,6 +63,11 @@ if (window.hljs) {
 
 
 
+<style type="text/css">
+#rmd-source-code {
+  display: none;
+}
+</style>
 
 
 
@@ -348,6 +354,24 @@ div.tocify {
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    RNAseq
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="RNAseq_0_Sample_Metadata.html">Sample Metadata</a>
+    </li>
+    <li>
+      <a href="RNAseq_1_Processing_QC.html">Processing and QC</a>
+    </li>
+    <li>
+      <a href="RNAseq_2_Differential_Expression.html">Differential Expression</a>
+    </li>
+  </ul>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
     RRBS
      
     <span class="caret"></span>
@@ -363,27 +387,12 @@ div.tocify {
       <a href="RRBS_2_Exploratory_Analysis.html">Exploratory Analysis</a>
     </li>
     <li>
-      <a href="RRBS_3_Differential_Methylation.html">Differential Methylation</a>
+      <a href="RRBS_3_Differential_Methylation_gt.html">Differential Methylation; pooled sex and age</a>
+    </li>
+    <li>
+      <a href="RRBS_3_Differential_Methylation_gtsxag.html">Differential Methylation; separate sex and age</a>
     </li>
     <li class="dropdown-header">Methylation by Position</li>
-  </ul>
-</li>
-<li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-    RNAseq
-     
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu" role="menu">
-    <li>
-      <a href="RNAseq_0_Sample_Metadata.html">Sample Metadata</a>
-    </li>
-    <li>
-      <a href="RNAseq_1_Processing_QC.html">Processing and QC</a>
-    </li>
-    <li>
-      <a href="RNAseq_2_Differential_Expression.html">Differential Expression</a>
-    </li>
   </ul>
 </li>
       </ul>
@@ -424,6 +433,8 @@ div.tocify {
 <ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
 <li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
 <li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+<li role="separator" class="divider"></li>
+<li><a id="rmd-download-source" href="#">Download Rmd</a></li>
 </ul>
 </div>
 
@@ -431,7 +442,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">RRBS Sample Metadata</h1>
 <h4 class="author">Annat Haber</h4>
-<h4 class="date">2021-05-19</h4>
+<h4 class="date">2021-06-04</h4>
 
 </div>
 
@@ -439,8 +450,8 @@ div.tocify {
 <pre class="r"><code>knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = FALSE)</code></pre>
 <pre class="r"><code>suppressPackageStartupMessages({
-  library(tidyverse)
   library(synapser)
+  library(tidyverse)
 })</code></pre>
 <p>Sample size included in the RRBS analysis by sex, age, and genotype.</p>
 <pre class="r"><code>meta &lt;- read_csv(&quot;data/RRBS/RRBS_sample_metadata.csv&quot;, col_types = cols(.default = &quot;c&quot;)) %&gt;%
@@ -543,18 +554,18 @@ meta %&gt;%
 </tbody>
 </table>
 </div>
-<pre class="r"><code>saveRDS(meta, file=&quot;output/RRBS/sample_meta.RDS&quot;)
-write_csv(meta, file=&quot;output/RRBS/RRBS_sample_meta.csv&quot;)
+<p>Saving metadata and uploading to <a href="https://www.synapse.org/#!Synapse:syn25174517">synapse</a>. Genotype is recoded as “-/-”=“TT”; “-/+”=“CT”; “+/+”=“CC”</p>
+<pre class="r"><code>write_csv(meta, file=&quot;output/RRBS/RRBS_sample_meta.csv&quot;)
 
 synLogin() 
-
 file &lt;- File(&quot;output/RRBS/RRBS_sample_meta.csv&quot;,
              contentType = &quot;text/plain&quot;,
-             description = &quot;RRBS sample metadata&quot;,
+             description = &quot;sample metadata recoded&quot;,
              parent = &quot;syn25174486&quot;)
-provenance &lt;- Activity(executed = &quot;https://github.com/TheJacksonLaboratory/MTHFR_C667T&quot;)
-file &lt;- synStore(file, activity=provenance)</code></pre>
 
+provenance &lt;- Activity(executed = &quot;https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RRBS_0_Sample_Metadata.Rmd&quot;)</code></pre>
+
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiUlJCUyBTYW1wbGUgTWV0YWRhdGEiCmF1dGhvcjogIkFubmF0IEhhYmVyIgpkYXRlOiAnYHIgU3lzLkRhdGUoKWAnCm91dHB1dDoKICBodG1sX2RvY3VtZW50OgogICAgdG9jOiB0cnVlCiAgICBjb2RlX2ZvbGRpbmc6IGhpZGUKICAgIGRmX3ByaW50OiAia2FibGUiCi0tLQoKYGBge3Igc2V0dXAsIHdhcm5pbmc9RkFMU0UsIG1lc3NhZ2U9RkFMU0V9CmtuaXRyOjpvcHRzX2tuaXQkc2V0KHJvb3QuZGlyID0gcnByb2pyb290OjpmaW5kX3JzdHVkaW9fcm9vdF9maWxlKCkpCmtuaXRyOjpvcHRzX2NodW5rJHNldChtZXNzYWdlPUZBTFNFLCB3YXJuaW5nPUZBTFNFLCBjYWNoZSA9IEZBTFNFKQpgYGAKCmBgYHtyIGxpYnJhcmllc30Kc3VwcHJlc3NQYWNrYWdlU3RhcnR1cE1lc3NhZ2VzKHsKICBsaWJyYXJ5KHN5bmFwc2VyKQogIGxpYnJhcnkodGlkeXZlcnNlKQp9KQpgYGAKClNhbXBsZSBzaXplIGluY2x1ZGVkIGluIHRoZSBSUkJTIGFuYWx5c2lzIGJ5IHNleCwgYWdlLCBhbmQgZ2Vub3R5cGUuICAKYGBge3IgbWV0YWRhdGF9Cm1ldGEgPC0gcmVhZF9jc3YoImRhdGEvUlJCUy9SUkJTX3NhbXBsZV9tZXRhZGF0YS5jc3YiLCBjb2xfdHlwZXMgPSBjb2xzKC5kZWZhdWx0ID0gImMiKSkgJT4lCiAgbXV0YXRlKGdlbm90eXBlID0gcmVjb2RlKGdlbm90eXBlLCAiLS8tIj0iVFQiLCAiLS8rIj0iQ1QiLCAiKy8rIj0iQ0MiKSwKICAgICAgICAgZ3JvdXAgPSBwYXN0ZShnZW5vdHlwZSwgYWdlLCBzZXgsIHNlcD0iXyIpLAogICAgICAgICBzYW1wbGVfaWQgPSBzdHJfcGFkKHRhZ19pZCwgNSwgcGFkID0gIjAiKSkgJT4lCiAgYXJyYW5nZShzYW1wbGVfaWQpCgojIGFkZCB0cmVhdG1lbnQgdmVjdG9yIGZvciBtZXRoeWxLaXQgb3BlcmF0aW9ucwptZXRhIDwtIGxlZnRfam9pbihtZXRhLAogICAgICAgICAgICAgIGRhdGEuZnJhbWUodHJlYXRtZW50PTA6MTEsIGdyb3VwPXVuaXF1ZShtZXRhJGdyb3VwKSksCiAgICAgICAgICAgICAgYnk9Imdyb3VwIikKCm1ldGEgJT4lIAogIGdyb3VwX2J5KHNleCwgYWdlLCBnZW5vdHlwZSkgJT4lCiAgc3VtbWFyaXNlKG49bigpKQpgYGAKClNhdmluZyBtZXRhZGF0YSBhbmQgdXBsb2FkaW5nIHRvIFtzeW5hcHNlXShodHRwczovL3d3dy5zeW5hcHNlLm9yZy8jIVN5bmFwc2U6c3luMjUxNzQ1MTcpLgpHZW5vdHlwZSBpcyByZWNvZGVkIGFzICItLy0iPSJUVCI7ICItLysiPSJDVCI7ICIrLysiPSJDQyIKYGBge3Igb3V0cHV0LCByZXN1bHRzPSdoaWRlJ30Kd3JpdGVfY3N2KG1ldGEsIGZpbGU9Im91dHB1dC9SUkJTL1JSQlNfc2FtcGxlX21ldGEuY3N2IikKCnN5bkxvZ2luKCkgCmZpbGUgPC0gRmlsZSgib3V0cHV0L1JSQlMvUlJCU19zYW1wbGVfbWV0YS5jc3YiLAogICAgICAgICAgICAgY29udGVudFR5cGUgPSAidGV4dC9wbGFpbiIsCiAgICAgICAgICAgICBkZXNjcmlwdGlvbiA9ICJzYW1wbGUgbWV0YWRhdGEgcmVjb2RlZCIsCiAgICAgICAgICAgICBwYXJlbnQgPSAic3luMjUxNzQ0ODYiKQoKcHJvdmVuYW5jZSA8LSBBY3Rpdml0eShleGVjdXRlZCA9ICJodHRwczovL2dpdGh1Yi5jb20vVGhlSmFja3NvbkxhYm9yYXRvcnkvTVRIRlJfQzY2N1QvYmxvYi9tYXN0ZXIvUlJCU18wX1NhbXBsZV9NZXRhZGF0YS5SbWQiKQpgYGA=</div>
 
 
 </div>
@@ -592,6 +603,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
+  window.initializeSourceEmbed("RRBS_0_Sample_Metadata.Rmd");
   window.initializeCodeFolding("hide" === "show");
 });
 </script>

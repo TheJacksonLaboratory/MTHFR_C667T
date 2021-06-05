@@ -16,6 +16,7 @@ knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = FALSE)
 
 ```{r libraries}
 suppressPackageStartupMessages({
+  library(synapser)
   library(tidyverse)
 })
 ```
@@ -32,6 +33,18 @@ meta %>%
   group_by(sex, age, genotype) %>%
   summarise(n=n())
 
+```
+
+Saving metadata and uploading to [synapse](https://www.synapse.org/#!Synapse:syn25834043).
+Genotype is recoded as "-/-"="TT"; "-/+"="CT"; "+/+"="CC"
+```{r output, results='hide'}
 write_csv(meta, file="output/RNAseq/RNAseq_sample_meta.csv")
 
+synLogin() 
+file <- File("output/RNAseq/RNAseq_sample_meta.csv",
+             contentType = "text/plain",
+             description = "sample metadata recoded",
+             parent = "syn25174489")
+
+provenance <- Activity(executed = "https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RNAseq_0_Sample_Metadata.Rmd")
 ```

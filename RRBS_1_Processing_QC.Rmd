@@ -15,9 +15,9 @@ knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = TRUE)
 
 ```{r libraries}
 suppressPackageStartupMessages({
+  library(synapser)
   library(methylKit)
   library(tidyverse)
-  library(synapser)
 })
 ```
 
@@ -130,9 +130,17 @@ saveRDS(site_meth, file="output/RRBS/1_Processing_QC/persite_meth.RDS")
 write_csv(data.frame(site_meth), file="output/RRBS/1_Processing_QC/RRBS_persite_meth.csv")
 ```
 
-Uploading percent methylation per site to [Synapse](https://www.synapse.org/#!Synapse:syn23573590/wiki/607402) as csv file.
+Uploading to [Synapse](https://www.synapse.org/#!Synapse:syn25174486) percent methylation per site as csv file and the raw methylKit object (fitered and merged).
 ```{r synapse, results='hide'}
 synLogin() 
+
+file <- File("output/RRBS/1_Processing_QC/united_meth.RDS",
+             contentType = "text/plain",
+             description = "RRBS raw methylKit; filtered for coverage x10 and including only sites that are covered in all samples",
+             parent = "syn25174486")
+provenance <- Activity(used = "syn25174517",
+                       executed = "https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RRBS_1_Processing_QC.Rmd")
+file <- synStore(file, activity=provenance)
 
 file <- File("output/RRBS/1_Processing_QC/RRBS_persite_meth.csv",
              contentType = "text/plain",

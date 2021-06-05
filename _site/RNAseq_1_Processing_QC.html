@@ -11,7 +11,7 @@
 
 <meta name="author" content="Annat Haber" />
 
-<meta name="date" content="2021-05-19" />
+<meta name="date" content="2021-06-04" />
 
 <title>RNAseq Processing and QC</title>
 
@@ -35,6 +35,7 @@
 <script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <script src="site_libs/navigation-1.1/codefolding.js"></script>
+<script src="site_libs/navigation-1.1/sourceembed.js"></script>
 <link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
 <link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
@@ -62,6 +63,11 @@ if (window.hljs) {
 
 
 
+<style type="text/css">
+#rmd-source-code {
+  display: none;
+}
+</style>
 
 
 
@@ -348,6 +354,24 @@ div.tocify {
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    RNAseq
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="RNAseq_0_Sample_Metadata.html">Sample Metadata</a>
+    </li>
+    <li>
+      <a href="RNAseq_1_Processing_QC.html">Processing and QC</a>
+    </li>
+    <li>
+      <a href="RNAseq_2_Differential_Expression.html">Differential Expression</a>
+    </li>
+  </ul>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
     RRBS
      
     <span class="caret"></span>
@@ -363,27 +387,12 @@ div.tocify {
       <a href="RRBS_2_Exploratory_Analysis.html">Exploratory Analysis</a>
     </li>
     <li>
-      <a href="RRBS_3_Differential_Methylation.html">Differential Methylation</a>
+      <a href="RRBS_3_Differential_Methylation_gt.html">Differential Methylation; pooled sex and age</a>
+    </li>
+    <li>
+      <a href="RRBS_3_Differential_Methylation_gtsxag.html">Differential Methylation; separate sex and age</a>
     </li>
     <li class="dropdown-header">Methylation by Position</li>
-  </ul>
-</li>
-<li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-    RNAseq
-     
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu" role="menu">
-    <li>
-      <a href="RNAseq_0_Sample_Metadata.html">Sample Metadata</a>
-    </li>
-    <li>
-      <a href="RNAseq_1_Processing_QC.html">Processing and QC</a>
-    </li>
-    <li>
-      <a href="RNAseq_2_Differential_Expression.html">Differential Expression</a>
-    </li>
   </ul>
 </li>
       </ul>
@@ -424,6 +433,8 @@ div.tocify {
 <ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
 <li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
 <li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+<li role="separator" class="divider"></li>
+<li><a id="rmd-download-source" href="#">Download Rmd</a></li>
 </ul>
 </div>
 
@@ -431,7 +442,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">RNAseq Processing and QC</h1>
 <h4 class="author">Annat Haber</h4>
-<h4 class="date">2021-05-19</h4>
+<h4 class="date">2021-06-04</h4>
 
 </div>
 
@@ -439,8 +450,8 @@ div.tocify {
 <pre class="r"><code>knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = TRUE)</code></pre>
 <pre class="r"><code>suppressPackageStartupMessages({
-  library(tidyverse)
   library(synapser)
+  library(tidyverse)
 })</code></pre>
 <pre class="r"><code>meta &lt;- read_csv(&quot;output/RNAseq/RNAseq_sample_meta.csv&quot;, col_types = cols(.default = &quot;c&quot;)) %&gt;% 
   arrange(genotype,age,sex)</code></pre>
@@ -517,7 +528,8 @@ file.copy(from = &quot;output/RNAseq/1_Processing_QC/samplesheet.csv&quot;,
 </div>
 <div id="qc-genotypes" class="section level2">
 <h2>QC: Genotypes</h2>
-<p>Extracting genotypes from fastq files to validate metadata</p>
+<p>Extracting genotypes from fastq files to validate metadata. These samples seem to be genotyped incorrectly and need to switch: 34158 from TT to CT<br />
+34163 from CT to TT</p>
 <pre class="bash"><code>#singularity pull --name ~/bin/bam-readcount shub://jaxreg.jax.org/rit-ci/bam-readcount:v0.8
 #~/bin/bam-readcount $inpath/CC_18_F_R1.sorted.bam 4:148048151-148048151
 
@@ -1149,10 +1161,19 @@ gt_c667t</code></pre>
 <h2>Output</h2>
 <p>Saving</p>
 <pre class="r"><code>saveRDS(meta, file=&quot;output/RNAseq/1_Processing_QC/samplesheet_meta.RDS&quot;)</code></pre>
-<p>Uploading to <a href="https://www.synapse.org/#!Synapse:syn23573590/wiki/607402">Synapse</a> as csv file.</p>
-<pre class="r"><code>synLogin() </code></pre>
+<p>Uploading raw counts to <a href="https://www.synapse.org/#!Synapse:syn25834044">synapse</a></p>
+<pre class="r"><code>synLogin() 
+## variant vs wt
+file &lt;- File(&quot;output/RNAseq/1_Processing_QC/nf_rnaseq_output/star_rsem/rsem.merged.gene_counts.tsv&quot;,
+             contentType = &quot;text/plain&quot;,
+             description = &quot;rsem counts&quot;,
+             parent = &quot;syn25174489&quot;)
+
+provenance &lt;- Activity(used = c(&quot;syn25834043&quot;),
+                       executed = &quot;https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RNAseq_1_Processing_QC.Rmd&quot;)</code></pre>
 </div>
 
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiUk5Bc2VxIFByb2Nlc3NpbmcgYW5kIFFDIgphdXRob3I6ICJBbm5hdCBIYWJlciIKZGF0ZTogJ2ByIFN5cy5EYXRlKClgJwpvdXRwdXQ6CiAgaHRtbF9kb2N1bWVudDoKICAgIHRvYzogdHJ1ZQogICAgY29kZV9mb2xkaW5nOiBoaWRlCiAgICBkZl9wcmludDogImthYmxlIgotLS0KCmBgYHtyIHNldHVwLCB3YXJuaW5nPUZBTFNFLCBtZXNzYWdlPUZBTFNFfQprbml0cjo6b3B0c19rbml0JHNldChyb290LmRpciA9IHJwcm9qcm9vdDo6ZmluZF9yc3R1ZGlvX3Jvb3RfZmlsZSgpKQprbml0cjo6b3B0c19jaHVuayRzZXQobWVzc2FnZT1GQUxTRSwgd2FybmluZz1GQUxTRSwgY2FjaGUgPSBUUlVFKQpgYGAKCmBgYHtyIGxpYnJhcmllc30Kc3VwcHJlc3NQYWNrYWdlU3RhcnR1cE1lc3NhZ2VzKHsKICBsaWJyYXJ5KHN5bmFwc2VyKQogIGxpYnJhcnkodGlkeXZlcnNlKQp9KQpgYGAKCmBgYHtyIG1ldGFkYXRhfQptZXRhIDwtIHJlYWRfY3N2KCJvdXRwdXQvUk5Bc2VxL1JOQXNlcV9zYW1wbGVfbWV0YS5jc3YiLCBjb2xfdHlwZXMgPSBjb2xzKC5kZWZhdWx0ID0gImMiKSkgJT4lIAogIGFycmFuZ2UoZ2Vub3R5cGUsYWdlLHNleCkKYGBgCgojIyBMaW5raW5nIGlucHV0IGZhc3RxIGZpbGVzCkNyZWF0aW5nIHN5bWJvbGljIGxpbmtzIHRvIHRoZSBvcmlnaW5hbCBmYXN0cSBmaWxlcy4gIApGaWxlcyBhcmUgcmVuYW1lZCBhcyBgPHNhbXBsZV9pZD5fUlsxfDJdLmZhc3RxLmd6YC4gU2FtcGxlIGlkcyBhcmUgcGFkZGVkIHdpdGggemVyb3MgdG8gaGF2ZSBmaXZlIGRpZ2l0cyAgICAgIApgYGB7ciBzeW1saW5rX2RhdGEsIGV2YWw9RkFMU0V9CiMgb3JpZ2luYWwgZmlsZXMgdG8gbGluayB0bwpvcmlnZmlsZXMgPC0gYyhsaXN0LmZpbGVzKCIvcHJvamVjdHMvaG93ZWxsLWxhYi8wMF9mYXN0cS9yZWFnYWEvUk5Bc2VxIiwKICAgICAgICAgICAgICAgICAgICAgICAgcGF0dGVybj0iLipHVDIwLiouZmFzdHEuZ3oiLCBmdWxsLm5hbWVzID0gVFJVRSkpCgpmb3IgKGlkIGluIG1ldGEkdGFnX2lkKSB7CiAgaWYgKGlkPT0iNDgyODkiKSB7ICMjIHR5cG8gaW4gdGhlIGZhc3RxIGZpbGUgbmFtZQogICAgICBmbGluayA8LSBwYXN0ZTAoImRhdGEvUk5Bc2VxLyIsIHN0cl9wYWQoaWQsIDUsIHBhZCA9ICIwIiksICJfUjEuZmFzdHEuZ3oiKSAjIGxpbmsgbmFtZSBhbmQgcGF0aAogICAgICBvZmlsZSA8LSBncmVwKCIvNDkyODlfLitfUjEiLCBvcmlnZmlsZXMsIHZhbHVlPVRSVUUpICMgb3JpZ2luYWwgZmlsZSBuYW1lIGFuZCBwYXRoCiAgICAgIGZpbGUuc3ltbGluayhvZmlsZSwgZmxpbmspCiAgICAgIAogICAgICBmbGluayA8LSBwYXN0ZTAoImRhdGEvUk5Bc2VxLyIsIHN0cl9wYWQoaWQsIDUsIHBhZCA9ICIwIiksICJfUjIuZmFzdHEuZ3oiKSAjIGxpbmsgbmFtZSBhbmQgcGF0aAogICAgICBvZmlsZSA8LSBncmVwKCIvNDkyODlfLitfUjIiLCBvcmlnZmlsZXMsIHZhbHVlPVRSVUUpICMgb3JpZ2luYWwgZmlsZSBuYW1lIGFuZCBwYXRoCiAgICAgIGZpbGUuc3ltbGluayhvZmlsZSwgZmxpbmspCgogIH0gZWxzZSB7CiAgICAgIGZsaW5rIDwtIHBhc3RlMCgiZGF0YS9STkFzZXEvIiwgc3RyX3BhZChpZCwgNSwgcGFkID0gIjAiKSwgIl9SMS5mYXN0cS5neiIpICMgbGluayBuYW1lIGFuZCBwYXRoCiAgICAgIG9maWxlIDwtIGdyZXAocGFzdGUwKCIvIixpZCwiXy4rX1IxIiksIG9yaWdmaWxlcywgdmFsdWU9VFJVRSkgIyBvcmlnaW5hbCBmaWxlIG5hbWUgYW5kIHBhdGgKICAgICAgZmlsZS5zeW1saW5rKG9maWxlLCBmbGluaykKICAgICAgCiAgICAgIGZsaW5rIDwtIHBhc3RlMCgiZGF0YS9STkFzZXEvIiwgc3RyX3BhZChpZCwgNSwgcGFkID0gIjAiKSwgIl9SMi5mYXN0cS5neiIpICMgbGluayBuYW1lIGFuZCBwYXRoCiAgICAgIG9maWxlIDwtIGdyZXAocGFzdGUwKCIvIixpZCwiXy4rX1IyIiksIG9yaWdmaWxlcywgdmFsdWU9VFJVRSkgIyBvcmlnaW5hbCBmaWxlIG5hbWUgYW5kIHBhdGgKICAgICAgZmlsZS5zeW1saW5rKG9maWxlLCBmbGluaykKICAgICAgfQp9CmBgYAoKQ3JlYXRpbmcgW2BzYW1wbGVzaGVldC5jc3ZgXShodHRwczovL2dpdGh1Yi5jb20vbmYtY29yZS9ybmFzZXEvYmxvYi8zLjAvYXNzZXRzL3NhbXBsZXNoZWV0LmNzdikgZm9yIHRoZSBuZi1jb3JlIHJuYXNlcSBwaXBlbGluZQpgYGB7cn0KbnIgPC0gZHBseXI6OmNvdW50KG1ldGEsIGdyb3VwKSAlPiUgcHVsbChuKQpyZXBsIDwtIGMoKTsgZm9yIChpIGluIDE6bGVuZ3RoKG5yKSkge3JlcGwgPC0gYyhyZXBsLCAxOm5yW2ldKX0KCmZxcGF0aCA8LSAiL3Byb2plY3RzL2NhcnRlci1sYWIvTVRIRlIvZGF0YS9STkFzZXEvIgogIApzYW1wbGVzaGVldCA8LSB0aWJibGUoZ3JvdXAgPSBtZXRhJGdyb3VwLAogICAgICAgICAgICAgICAgICAgICAgcmVwbGljYXRlID0gcmVwbCwKICAgICAgICAgICAgICAgICAgICAgIGZhc3RxXzEgPSBwYXN0ZTAoZnFwYXRoLCBtZXRhJHNhbXBsZV9pZCwgIl9SMS5mYXN0cS5neiIpLAogICAgICAgICAgICAgICAgICAgICAgZmFzdHFfMiA9IHBhc3RlMChmcXBhdGgsIG1ldGEkc2FtcGxlX2lkLCAiX1IyLmZhc3RxLmd6IiksCiAgICAgICAgICAgICAgICAgICAgICBzdHJhbmRlZG5lc3MgPSAicmV2ZXJzZSIpCgp3cml0ZV9jc3Yoc2FtcGxlc2hlZXQsICJvdXRwdXQvUk5Bc2VxLzFfUHJvY2Vzc2luZ19RQy9zYW1wbGVzaGVldC5jc3YiKQoKbWV0YSRzYW1wbGVzaGVldCA8LSBwYXN0ZTAobWV0YSRncm91cCwgIl9SIiwgcmVwbCkKYGBgCgojIyBQcm9jZXNzaW5nIGZhc3RxIEZpbGVzClRoZSBmYXN0cSBmaWxlcyBhcmUgcHJvY2Vzc2VkIHVzaW5nIHRoZSBbbmV4dGZsb3ctY29yZSBtZXRoeWxzZXEgcGlwZWxpbmVdKGh0dHBzOi8vZ2l0aHViLmNvbS9uZi1jb3JlL21ldGh5bHNlcSksIGFuZCBzdWJtaXR0ZWQgdG8gc3VtbmVyIHdpdGggW3RoaXMgc2NyaXB0XShhc3NldHMvUlJCU19ydW5fbmZfbWV0aHlsc2VxLnNiYXRjaCkuICAKUmVhZHMgd2VyZSBhbGlnbmVkIHRvIEdSQ20zOCByZWZlcmVuY2UgZ2Vub21lIGFzIGEgZGlyZWN0aW9uYWwgbGlicmFyeS4gCmBgYHtiYXNoIHJ1bl9uZiwgZXZhbD1GQUxTRX0KY2QgL3Byb2plY3RzL2NhcnRlci1sYWIvTVRIRlIvb3V0cHV0L1JOQXNlcS8xX1Byb2Nlc3NpbmdfUUMKc2JhdGNoIHJ1bl9uZl9ybmFzZXEuc2JhdGNoCmNwIHJ1bl9uZl9ybmFzZXEuc2JhdGNoIC9wcm9qZWN0cy9jYXJ0ZXItbGFiL01USEZSL2Fzc2V0cy9STkFzZXFfcnVuX25mX3JuYXNlcS5zYmF0Y2gKbmV4dGZsb3cgY2xlYW4gLWYKYGBgCgojIyBRQzogUHJvY2Vzc2luZyBQaXBlbGluZQpTdW1tYXJ5IHJlcG9ydHMgZ2VuZXJhdGVkIGJ5IHRoZSBwaXBlbGluZToKYGBge3IgcWNfZmlsZXMsIHJlc3VsdHM9J2hpZGUnfQpmaWxlLmNvcHkoZnJvbSA9ICJvdXRwdXQvUk5Bc2VxLzFfUHJvY2Vzc2luZ19RQy9uZl9ybmFzZXFfb3V0cHV0L211bHRpcWMvc3Rhcl9yc2VtL211bHRpcWNfcmVwb3J0Lmh0bWwiLCAKICAgICAgICAgIHRvID0gIi4vYXNzZXRzL1JOQXNlcV9tdWx0aXFjX3JlcG9ydC5odG1sIiwgCiAgICAgICAgICBvdmVyd3JpdGUgPSBUUlVFLCByZWN1cnNpdmUgPSBGQUxTRSwgY29weS5tb2RlID0gVFJVRSwgY29weS5kYXRlID0gVFJVRSkKCmZpbGUuY29weShmcm9tID0gIm91dHB1dC9STkFzZXEvMV9Qcm9jZXNzaW5nX1FDL3NhbXBsZXNoZWV0LmNzdiIsIAogICAgICAgICAgdG8gPSAiLi9hc3NldHMvUk5Bc2VxX3NhbXBsZXNoZWV0LmNzdiIsIAogICAgICAgICAgb3ZlcndyaXRlID0gVFJVRSwgcmVjdXJzaXZlID0gRkFMU0UsIGNvcHkubW9kZSA9IFRSVUUsIGNvcHkuZGF0ZSA9IFRSVUUpCmBgYAoxLiBbT3ZlcnZpZXcgb2YgcGlwZWxpbmUgYW5kIG91dHB1dF0oaHR0cHM6Ly9uZi1jby5yZS9ybmFzZXEvMy4wL291dHB1dCkgIAoyLiBbUUMgcmVwb3J0IGZvciBhbGwgc3RlcHNdKGFzc2V0cy9STkFzZXFfbXVsdGlxY19yZXBvcnQuaHRtbCkgICAKMy4gW1NhbXBsZSBsaXN0IHRoYXQgbWF0Y2hlcyB0aGUgcGlwZWxpbmUncyBub3RhdGlvbl0oYXNzZXRzL1JOQXNlcV9zYW1wbGVzaGVldC5jc3YpCgojIyBRQzogR2Vub3R5cGVzCkV4dHJhY3RpbmcgZ2Vub3R5cGVzIGZyb20gZmFzdHEgZmlsZXMgdG8gdmFsaWRhdGUgbWV0YWRhdGEuClRoZXNlIHNhbXBsZXMgc2VlbSB0byBiZSBnZW5vdHlwZWQgaW5jb3JyZWN0bHkgYW5kIG5lZWQgdG8gc3dpdGNoOgozNDE1OCBmcm9tIFRUIHRvIENUICAKMzQxNjMgZnJvbSBDVCB0byBUVCAgCmBgYHtiYXNoIG1waWxldXAsIGV2YWw9RkFMU0V9CiNzaW5ndWxhcml0eSBwdWxsIC0tbmFtZSB+L2Jpbi9iYW0tcmVhZGNvdW50IHNodWI6Ly9qYXhyZWcuamF4Lm9yZy9yaXQtY2kvYmFtLXJlYWRjb3VudDp2MC44CiN+L2Jpbi9iYW0tcmVhZGNvdW50ICRpbnBhdGgvQ0NfMThfRl9SMS5zb3J0ZWQuYmFtIDQ6MTQ4MDQ4MTUxLTE0ODA0ODE1MQoKZGlyPS9wcm9qZWN0cy9jYXJ0ZXItbGFiL01USEZSL291dHB1dC9STkFzZXEvMV9Qcm9jZXNzaW5nX1FDCmxzICRkaXIvbmZfcm5hc2VxX291dHB1dC9zdGFyX3JzZW0vKlsxLTddLnNvcnRlZC5iYW0gPiAkZGlyL2JhbWxpc3QudHh0CgpzaW5ndWxhcml0eSBleGVjIH4vYmluL2h0c2xpYiBzYW10b29scyBtcGlsZXVwIFwKICAgICAgLUIgXAogICAgICAtciA0OjE0ODA0ODE0MS0xNDgwNDgxNjEgXAogICAgICAtYiAkZGlyL2JhbWxpc3QudHh0ID4gJGRpci9tcF9ndC50eHQKYGBgCgpgYGB7ciBwYXJzZV9tcGd0fQptcGd0IDwtIHJlYWRfdHN2KCJvdXRwdXQvUk5Bc2VxLzFfUHJvY2Vzc2luZ19RQy9tcF9ndC50eHQiLCBjb2xfbmFtZXMgPSBGQUxTRSkKbXBndCA8LSBzZWxlY3QobXBndCwgc2VxKDUsIG5jb2wobXBndCksIDMpKQoKI2JhbWxpc3QgPC0gcmVhZF90YWJsZSgib3V0cHV0L1JOQXNlcS8xX1Byb2Nlc3NpbmdfUUMvYmFtbGlzdC50eHQiLCBjb2xfbmFtZXMgPSBGQUxTRSkKCmd0X2M2Njd0IDwtIHNsaWNlKG1wZ3QsIDExKSAlPiUKICB0KCkgJT4lCiAgYXMudGliYmxlKCkgJT4lCiAgbXV0YXRlKCJBIiA9IHN0cl9jb3VudChWMSwgIlthfEFdIiksCiAgICAgICAgICJDIiA9IHN0cl9jb3VudChWMSwgIltjfENdIiksCiAgICAgICAgICJHIiA9IHN0cl9jb3VudChWMSwgIltnfEddIiksCiAgICAgICAgICJUIiA9IHN0cl9jb3VudChWMSwgIlt0fFRdIikpICU+JQogIHNlbGVjdCgtVjEpICU+JQogIGFkZF9jb2x1bW4oc2FtcGxlX2lkID0gbWV0YSRzYW1wbGVfaWQsIGdyb3VwID0gbWV0YSRncm91cCwgLmJlZm9yZSA9IDEpCgpndF9jNjY3dApgYGAKCmBgYHtyLCBpbmNsdWRlPUZBTFNFLCBldmFsPUZBTFNFfQpndDcgPC0gbXBndCAlPiUKICBtdXRhdGUoYWNyb3NzKC5jb2xzID0gZXZlcnl0aGluZygpLCAuZm5zID0gc3Vic3RyLCBzdGFydD01LCBzdG9wPTUpKSAlPiUKICBtdXRhdGUoYWNyb3NzKC5jb2xzID0gZXZlcnl0aGluZygpLCAuZm5zID0gc3RyX3RvX3VwcGVyKSkgJT4lCiAgdCgpICU+JQogIGFzLnRpYmJsZSgpICU+JQogIHVuaXRlKGNvbD1ndF8xNDFfMTYxLCAxOjIxLCBzZXA9IiIpCmBgYAoKIyMgT3V0cHV0ClNhdmluZwpgYGB7ciBvdXRwdXRfc2F2ZX0Kc2F2ZVJEUyhtZXRhLCBmaWxlPSJvdXRwdXQvUk5Bc2VxLzFfUHJvY2Vzc2luZ19RQy9zYW1wbGVzaGVldF9tZXRhLlJEUyIpCmBgYApVcGxvYWRpbmcgcmF3IGNvdW50cyB0byBbc3luYXBzZV0oaHR0cHM6Ly93d3cuc3luYXBzZS5vcmcvIyFTeW5hcHNlOnN5bjI1ODM0MDQ0KQpgYGB7ciBvdXRwdXRfc3luYXBzZSwgcmVzdWx0cz0naGlkZSd9CnN5bkxvZ2luKCkgCiMjIHZhcmlhbnQgdnMgd3QKZmlsZSA8LSBGaWxlKCJvdXRwdXQvUk5Bc2VxLzFfUHJvY2Vzc2luZ19RQy9uZl9ybmFzZXFfb3V0cHV0L3N0YXJfcnNlbS9yc2VtLm1lcmdlZC5nZW5lX2NvdW50cy50c3YiLAogICAgICAgICAgICAgY29udGVudFR5cGUgPSAidGV4dC9wbGFpbiIsCiAgICAgICAgICAgICBkZXNjcmlwdGlvbiA9ICJyc2VtIGNvdW50cyIsCiAgICAgICAgICAgICBwYXJlbnQgPSAic3luMjUxNzQ0ODkiKQoKcHJvdmVuYW5jZSA8LSBBY3Rpdml0eSh1c2VkID0gYygic3luMjU4MzQwNDMiKSwKICAgICAgICAgICAgICAgICAgICAgICBleGVjdXRlZCA9ICJodHRwczovL2dpdGh1Yi5jb20vVGhlSmFja3NvbkxhYm9yYXRvcnkvTVRIRlJfQzY2N1QvYmxvYi9tYXN0ZXIvUk5Bc2VxXzFfUHJvY2Vzc2luZ19RQy5SbWQiKQpgYGA=</div>
 
 
 </div>
@@ -1190,6 +1211,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
+  window.initializeSourceEmbed("RNAseq_1_Processing_QC.Rmd");
   window.initializeCodeFolding("hide" === "show");
 });
 </script>

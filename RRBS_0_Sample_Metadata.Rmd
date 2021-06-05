@@ -16,8 +16,8 @@ knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = FALSE)
 
 ```{r libraries}
 suppressPackageStartupMessages({
-  library(tidyverse)
   library(synapser)
+  library(tidyverse)
 })
 ```
 
@@ -39,18 +39,16 @@ meta %>%
   summarise(n=n())
 ```
 
-
+Saving metadata and uploading to [synapse](https://www.synapse.org/#!Synapse:syn25174517).
+Genotype is recoded as "-/-"="TT"; "-/+"="CT"; "+/+"="CC"
 ```{r output, results='hide'}
-saveRDS(meta, file="output/RRBS/sample_meta.RDS")
 write_csv(meta, file="output/RRBS/RRBS_sample_meta.csv")
 
 synLogin() 
-
 file <- File("output/RRBS/RRBS_sample_meta.csv",
              contentType = "text/plain",
-             description = "RRBS sample metadata",
+             description = "sample metadata recoded",
              parent = "syn25174486")
-provenance <- Activity(executed = "https://github.com/TheJacksonLaboratory/MTHFR_C667T")
-file <- synStore(file, activity=provenance)
 
+provenance <- Activity(executed = "https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RRBS_0_Sample_Metadata.Rmd")
 ```

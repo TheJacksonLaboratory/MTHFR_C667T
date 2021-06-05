@@ -17,18 +17,6 @@ navbar:
         href: RRBS_Pilot_3_Differential_Methylation.html
       - text: "Methylation by Position"
         #href: RRBS_Pilot_4_Methylation_Position.html
-    - text: "RRBS"
-      menu:
-      - text: "Sample Metadata"
-        href: RRBS_0_Sample_Metadata.html
-      - text: "Processing and QC"
-        href: RRBS_1_Processing_QC.html
-      - text: "Exploratory Analysis"
-        href: RRBS_2_Exploratory_Analysis.html
-      - text: "Differential Methylation"
-        href: RRBS_3_Differential_Methylation.html
-      - text: "Methylation by Position"
-        #href: RRBS_4_Methylation_Position.html
     - text: "RNAseq"
       menu:
       - text: "Sample Metadata"
@@ -37,6 +25,20 @@ navbar:
         href: RNAseq_1_Processing_QC.html
       - text: "Differential Expression"
         href: RNAseq_2_Differential_Expression.html
+    - text: "RRBS"
+      menu:
+      - text: "Sample Metadata"
+        href: RRBS_0_Sample_Metadata.html
+      - text: "Processing and QC"
+        href: RRBS_1_Processing_QC.html
+      - text: "Exploratory Analysis"
+        href: RRBS_2_Exploratory_Analysis.html
+      - text: "Differential Methylation; pooled sex and age"
+        href: RRBS_3_Differential_Methylation_gt.html
+      - text: "Differential Methylation; separate sex and age"
+        href: RRBS_3_Differential_Methylation_gtsxag.html
+      - text: "Methylation by Position"
+        #href: RRBS_4_Methylation_Position.html
   right:
     - icon: fab fa-github
       href: https://github.com/TheJacksonLaboratory/MTHFR_C667T
@@ -53,7 +55,7 @@ output:
     toc_float: yes
     theme: cerulean
     highlight: textmate
-    keep_md: true
-
+    #keep_md: true
+    code_download: true
 
 

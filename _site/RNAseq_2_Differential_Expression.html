@@ -34,6 +34,7 @@
 <script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <script src="site_libs/navigation-1.1/codefolding.js"></script>
+<script src="site_libs/navigation-1.1/sourceembed.js"></script>
 <link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
 <link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
@@ -61,6 +62,11 @@ if (window.hljs) {
 
 
 
+<style type="text/css">
+#rmd-source-code {
+  display: none;
+}
+</style>
 
 
 
@@ -347,6 +353,24 @@ div.tocify {
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    RNAseq
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="RNAseq_0_Sample_Metadata.html">Sample Metadata</a>
+    </li>
+    <li>
+      <a href="RNAseq_1_Processing_QC.html">Processing and QC</a>
+    </li>
+    <li>
+      <a href="RNAseq_2_Differential_Expression.html">Differential Expression</a>
+    </li>
+  </ul>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
     RRBS
      
     <span class="caret"></span>
@@ -362,27 +386,12 @@ div.tocify {
       <a href="RRBS_2_Exploratory_Analysis.html">Exploratory Analysis</a>
     </li>
     <li>
-      <a href="RRBS_3_Differential_Methylation.html">Differential Methylation</a>
+      <a href="RRBS_3_Differential_Methylation_gt.html">Differential Methylation; pooled sex and age</a>
+    </li>
+    <li>
+      <a href="RRBS_3_Differential_Methylation_gtsxag.html">Differential Methylation; separate sex and age</a>
     </li>
     <li class="dropdown-header">Methylation by Position</li>
-  </ul>
-</li>
-<li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-    RNAseq
-     
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu" role="menu">
-    <li>
-      <a href="RNAseq_0_Sample_Metadata.html">Sample Metadata</a>
-    </li>
-    <li>
-      <a href="RNAseq_1_Processing_QC.html">Processing and QC</a>
-    </li>
-    <li>
-      <a href="RNAseq_2_Differential_Expression.html">Differential Expression</a>
-    </li>
   </ul>
 </li>
       </ul>
@@ -423,12 +432,15 @@ div.tocify {
 <ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
 <li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
 <li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+<li role="separator" class="divider"></li>
+<li><a id="rmd-download-source" href="#">Download Rmd</a></li>
 </ul>
 </div>
 
 
 
 <h1 class="title toc-ignore">RNAseq Differential Expression</h1>
+<h3 class="subtitle">Separated by genotype, age, and sex</h3>
 <h4 class="author">Annat Haber</h4>
 <h4 class="date">5/1/2021</h4>
 
@@ -444,15 +456,10 @@ knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = TRUE)</code></pre>
  })</code></pre>
 <div id="input" class="section level2">
 <h2>Input</h2>
-<ol style="list-style-type: decimal">
-<li>Read sample metadata and raw counts.<br />
-</li>
-<li>Switch genotypes for two samples based on <a href="RNAseq_1_Processing_QC">the QC</a>:<br />
+<p>Read sample metadata and raw counts.<br />
+Switch genotypes for two samples based on <a href="RNAseq_1_Processing_QC">the QC</a>:<br />
 34158 from TT to CT<br />
-34163 from CT to TT<br />
-</li>
-<li>Sort everything by sample ID.</li>
-</ol>
+34163 from CT to TT</p>
 <pre class="r"><code># read sample info
 meta &lt;- readRDS(&quot;output/RNAseq/1_Processing_QC/samplesheet_meta.RDS&quot;)
 meta$genotype[meta$sample_id==&quot;34158&quot;] &lt;- &quot;CT&quot;
@@ -474,7 +481,7 @@ colnames(counts) &lt;- meta$sample_id</code></pre>
 </div>
 <div id="sample-exploration" class="section level2">
 <h2>Sample exploration</h2>
-<p>Using variance stabilizing transformation for visualization. There is great separation between male and female. In females there is separation of age, but not in males. There is no separation at all between genotypes.</p>
+<p>Using variance stabilizing transformation for visualization. There is great separation by sex. In females there is separation by age, but not in males. There is some separation between CC and CT within each age group for females (seen mostly on PC3), but no separation by genotype otherwise.</p>
 <pre class="r"><code># Modifying plotPCA function to include PC3
 plotPCA = function(object, ntop=500, intgroup)
 {
@@ -517,16 +524,16 @@ ggplot(pcaData, aes(x=PC1,y=PC2)) +
   scale_size_discrete(range=c(1.5,3)) +
   xlab(paste0(&quot;PC1: &quot;,percentVar[1],&quot;% variance&quot;)) +
   ylab(paste0(&quot;PC2: &quot;,percentVar[2],&quot;% variance&quot;)) + 
-  coord_fixed()
-ggplot(pcaData, aes(x=PC1,y=PC3)) + 
+  coord_fixed()</code></pre>
+<p><img src="RNAseq_2_Differential_Expression_files/figure-html/sample_exp-1.png" width="672" /></p>
+<pre class="r"><code>ggplot(pcaData, aes(x=PC1,y=PC3)) + 
   geom_point(aes(shape=sex, color=genotype, size=age)) +
   scale_size_discrete(range=c(1.5,3)) +
   xlab(paste0(&quot;PC1: &quot;,percentVar[1],&quot;% variance&quot;)) +
   ylab(paste0(&quot;PC3: &quot;,percentVar[3],&quot;% variance&quot;)) + 
-  coord_fixed()
-
-rm(dds)</code></pre>
-<p><img src="RNAseq_2_Differential_Expression_files/figure-html/sample_exp-1.png" width="50%" style="background-color: #9ecff7; padding:1px; display: inline-block;" /><img src="RNAseq_2_Differential_Expression_files/figure-html/sample_exp-2.png" width="50%" style="background-color: #9ecff7; padding:1px; display: inline-block;" /></p>
+  coord_fixed()</code></pre>
+<p><img src="RNAseq_2_Differential_Expression_files/figure-html/sample_exp-2.png" width="672" /></p>
+<pre class="r"><code>rm(dds)</code></pre>
 </div>
 <div id="differential-expression" class="section level2 tabset tabset-fade tabset-pills">
 <h2>Differential expression</h2>
@@ -598,35 +605,35 @@ for (i in 1:nrow(grp)) {
 }</code></pre>
 <div id="ct_f_18" class="section level4">
 <h4>CT_F_18</h4>
-<p>Comparing CT_F_18 to CC_F_18 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-1.png" /><!-- --></p>
+<p>Comparing CT_F_18 to CC_F_18 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-1.png" width="672" /></p>
 </div>
 <div id="ct_f_6" class="section level4">
 <h4>CT_F_6</h4>
-<p>Comparing CT_F_6 to CC_F_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-2.png" /><!-- --></p>
+<p>Comparing CT_F_6 to CC_F_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-2.png" width="672" /></p>
 </div>
 <div id="ct_m_18" class="section level4">
 <h4>CT_M_18</h4>
-<p>Comparing CT_M_18 to CC_M_18 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-3.png" /><!-- --></p>
+<p>Comparing CT_M_18 to CC_M_18 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-3.png" width="672" /></p>
 </div>
 <div id="ct_m_6" class="section level4">
 <h4>CT_M_6</h4>
-<p>Comparing CT_M_6 to CC_M_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-4.png" /><!-- --></p>
+<p>Comparing CT_M_6 to CC_M_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-4.png" width="672" /></p>
 </div>
 <div id="tt_f_18" class="section level4">
 <h4>TT_F_18</h4>
-<p>Comparing TT_F_18 to CC_F_18 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-5.png" /><!-- --></p>
+<p>Comparing TT_F_18 to CC_F_18 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-5.png" width="672" /></p>
 </div>
 <div id="tt_f_6" class="section level4">
 <h4>TT_F_6</h4>
-<p>Comparing TT_F_6 to CC_F_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-6.png" /><!-- --></p>
+<p>Comparing TT_F_6 to CC_F_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-6.png" width="672" /></p>
 </div>
 <div id="tt_m_18" class="section level4">
 <h4>TT_M_18</h4>
-<p>Comparing TT_M_18 to CC_M_18 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-7.png" /><!-- --></p>
+<p>Comparing TT_M_18 to CC_M_18 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-7.png" width="672" /></p>
 </div>
 <div id="tt_m_6" class="section level4">
 <h4>TT_M_6</h4>
-<p>Comparing TT_M_6 to CC_M_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-8.png" /><!-- --></p>
+<p>Comparing TT_M_6 to CC_M_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_gt-8.png" width="672" /></p>
 <pre class="r"><code>de_resL_gt &lt;- de_resL
 rm(de_resL)</code></pre>
 </div>
@@ -699,27 +706,27 @@ for (i in 1:nrow(grp)) {
 }</code></pre>
 <div id="cc_f_18" class="section level4">
 <h4>CC_F_18</h4>
-<p>Comparing CC_F_18 to CC_F_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-1.png" /><!-- --></p>
+<p>Comparing CC_F_18 to CC_F_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-1.png" width="672" /></p>
 </div>
 <div id="cc_m_18" class="section level4">
 <h4>CC_M_18</h4>
-<p>Comparing CC_M_18 to CC_M_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-2.png" /><!-- --></p>
+<p>Comparing CC_M_18 to CC_M_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-2.png" width="672" /></p>
 </div>
 <div id="ct_f_18-1" class="section level4">
 <h4>CT_F_18</h4>
-<p>Comparing CT_F_18 to CT_F_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-3.png" /><!-- --></p>
+<p>Comparing CT_F_18 to CT_F_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-3.png" width="672" /></p>
 </div>
 <div id="ct_m_18-1" class="section level4">
 <h4>CT_M_18</h4>
-<p>Comparing CT_M_18 to CT_M_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-4.png" /><!-- --></p>
+<p>Comparing CT_M_18 to CT_M_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-4.png" width="672" /></p>
 </div>
 <div id="tt_f_18-1" class="section level4">
 <h4>TT_F_18</h4>
-<p>Comparing TT_F_18 to TT_F_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-5.png" /><!-- --></p>
+<p>Comparing TT_F_18 to TT_F_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-5.png" width="672" /></p>
 </div>
 <div id="tt_m_18-1" class="section level4">
 <h4>TT_M_18</h4>
-<p>Comparing TT_M_18 to TT_M_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-6.png" /><!-- --></p>
+<p>Comparing TT_M_18 to TT_M_6 <img src="RNAseq_2_Differential_Expression_files/figure-html/deseq_res_age-6.png" width="672" /></p>
 <pre class="r"><code>de_resL_age &lt;- de_resL
 rm(de_resL)</code></pre>
 </div>
@@ -727,16 +734,41 @@ rm(de_resL)</code></pre>
 </div>
 <div id="output" class="section level2">
 <h2>Output</h2>
+<p>Saving DEG lists to project folder</p>
 <pre class="r"><code>write_csv(sig.genes_gt,
-            file=&quot;output/RNAseq/2_Differential_Expression/sig_genes_padj01_variantVSwt.csv&quot;)
+            file=&quot;output/RNAseq/2_Differential_Expression/sig_deg_padj01_gt.csv&quot;)
 
 write_csv(sig.genes_age, 
-            file=&quot;output/RNAseq/2_Differential_Expression/sig_genes_padj01_18vs6.csv&quot;)
+            file=&quot;output/RNAseq/2_Differential_Expression/sig_deg_padj01_age.csv&quot;)
 
-saveRDS(de_resL_gt, file=&quot;output/RNAseq/2_Differential_Expression/sig.genes_gt.RDS&quot;)
-saveRDS(de_resL_age, file=&quot;output/RNAseq/2_Differential_Expression/sig.genes_age.RDS&quot;)</code></pre>
+saveRDS(de_resL_gt, file=&quot;output/RNAseq/2_Differential_Expression/sig_deg_gt.RDS&quot;)
+saveRDS(de_resL_age, file=&quot;output/RNAseq/2_Differential_Expression/sig_deg_age.RDS&quot;)</code></pre>
+<p>Uploading DEG lists to <a href="https://www.synapse.org/#!Synapse:syn25174489">synapse</a></p>
+<pre class="r"><code>synLogin() 
+## variant vs wt
+file &lt;- File(&quot;output/RNAseq/2_Differential_Expression/sig_deg_padj01_gt.csv&quot;,
+             contentType = &quot;text/plain&quot;,
+             description = &quot;lists of differentially expressed genes; variant vs wt&quot;,
+             parent = &quot;syn25174489&quot;)
+
+provenance &lt;- Activity(used = c(&quot;syn25834043&quot;, &quot;syn25834044&quot;),
+                       executed = &quot;https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RNAseq_2_Differential_Expression.Rmd&quot;)
+
+file &lt;- synStore(file, activity=provenance)
+
+# 18 vs 6 months
+file &lt;- File(&quot;output/RNAseq/2_Differential_Expression/sig_deg_padj01_age.csv&quot;,
+             contentType = &quot;text/plain&quot;,
+             description = &quot;lists of differentially expressed; 18 vs 6 months&quot;,
+             parent = &quot;syn25174489&quot;)
+
+provenance &lt;- Activity(used =  c(&quot;syn25834043&quot;, &quot;syn25834044&quot;),
+                       executed = &quot;https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RNAseq_2_Differential_Expression.Rmd&quot;)
+
+file &lt;- synStore(file, activity=provenance)</code></pre>
 </div>
 
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiUk5Bc2VxIERpZmZlcmVudGlhbCBFeHByZXNzaW9uIgpzdWJ0aXRsZTogIlNlcGFyYXRlZCBieSBnZW5vdHlwZSwgYWdlLCBhbmQgc2V4IgphdXRob3I6ICJBbm5hdCBIYWJlciIKZGF0ZTogIjUvMS8yMDIxIgpvdXRwdXQ6CiAgaHRtbF9kb2N1bWVudDoKICAgIHRvYzogdHJ1ZQogICAgY29kZV9mb2xkaW5nOiBoaWRlCiAgICBkZl9wcmludDogImthYmxlIgotLS0KCmBgYHtyIHNldHVwLCB3YXJuaW5nPUZBTFNFLCBtZXNzYWdlPUZBTFNFfQprbml0cjo6b3B0c19rbml0JHNldChyb290LmRpciA9IHJwcm9qcm9vdDo6ZmluZF9yc3R1ZGlvX3Jvb3RfZmlsZSgpKQprbml0cjo6b3B0c19jaHVuayRzZXQobWVzc2FnZT1GQUxTRSwgd2FybmluZz1GQUxTRSwgY2FjaGUgPSBUUlVFKQpgYGAKCmBgYHtyIGxpYnJhcmllc30Kc3VwcHJlc3NQYWNrYWdlU3RhcnR1cE1lc3NhZ2VzKHsKICBsaWJyYXJ5KHN5bmFwc2VyKQogIGxpYnJhcnkoREVTZXEyKQogIGxpYnJhcnkodGlkeXZlcnNlKQogfSkKYGBgCgojIyBJbnB1dApSZWFkIHNhbXBsZSBtZXRhZGF0YSBhbmQgcmF3IGNvdW50cy4gIApTd2l0Y2ggZ2Vub3R5cGVzIGZvciB0d28gc2FtcGxlcyBiYXNlZCBvbiBbdGhlIFFDXShSTkFzZXFfMV9Qcm9jZXNzaW5nX1FDKTogIAozNDE1OCBmcm9tIFRUIHRvIENUICAKMzQxNjMgZnJvbSBDVCB0byBUVCAgCmBgYHtyIGlucHV0fQojIHJlYWQgc2FtcGxlIGluZm8KbWV0YSA8LSByZWFkUkRTKCJvdXRwdXQvUk5Bc2VxLzFfUHJvY2Vzc2luZ19RQy9zYW1wbGVzaGVldF9tZXRhLlJEUyIpCm1ldGEkZ2Vub3R5cGVbbWV0YSRzYW1wbGVfaWQ9PSIzNDE1OCJdIDwtICJDVCIKbWV0YSRnZW5vdHlwZVttZXRhJHNhbXBsZV9pZD09IjM0MTYzIl0gPC0gIlRUIgptZXRhIDwtIG1ldGEgJT4lCiAgYXJyYW5nZShnZW5vdHlwZSwgc2V4LCBhZ2UpCgojIHJlYWQgcmF3IGNvdW50cwpjdHNmaWxlIDwtICJvdXRwdXQvUk5Bc2VxLzFfUHJvY2Vzc2luZ19RQy9uZl9ybmFzZXFfb3V0cHV0L3N0YXJfcnNlbS9yc2VtLm1lcmdlZC5nZW5lX2NvdW50cy50c3YiCmNvdW50cyA8LSByZWFkX3RzdihjdHNmaWxlKSAlPiUKICBkcGx5cjo6c2VsZWN0KC0idHJhbnNjcmlwdF9pZChzKSIpICU+JQogIGNvbHVtbl90b19yb3duYW1lcygiZ2VuZV9pZCIpICU+JQogIHJvdW5kKCkgJT4lCiAgYXMubWF0cml4KCkKCiMgcmVwbGFjZSBwaXBlbGluZSBzYW1wbGUgaWQgd2l0aCBvcmlnaW5hbCBzYW1wbGUgaWQKY291bnRzIDwtIGNvdW50c1ssbWV0YSRzYW1wbGVzaGVldF0KY29sbmFtZXMoY291bnRzKSA8LSBtZXRhJHNhbXBsZV9pZApgYGAKCiMjIFNhbXBsZSBleHBsb3JhdGlvbgpVc2luZyB2YXJpYW5jZSBzdGFiaWxpemluZyB0cmFuc2Zvcm1hdGlvbiBmb3IgdmlzdWFsaXphdGlvbi4KVGhlcmUgaXMgZ3JlYXQgc2VwYXJhdGlvbiBieSBzZXguIEluIGZlbWFsZXMgdGhlcmUgaXMgc2VwYXJhdGlvbiBieSBhZ2UsIGJ1dCBub3QgaW4gbWFsZXMuIFRoZXJlIGlzIHNvbWUgc2VwYXJhdGlvbiBiZXR3ZWVuIENDIGFuZCBDVCB3aXRoaW4gZWFjaCBhZ2UgZ3JvdXAgZm9yIGZlbWFsZXMgKHNlZW4gbW9zdGx5IG9uIFBDMyksIGJ1dCBubyBzZXBhcmF0aW9uIGJ5IGdlbm90eXBlIG90aGVyd2lzZS4KYGBge3IgcGxvdFBDQWZ1bmN0aW9ufQojIE1vZGlmeWluZyBwbG90UENBIGZ1bmN0aW9uIHRvIGluY2x1ZGUgUEMzCnBsb3RQQ0EgPSBmdW5jdGlvbihvYmplY3QsIG50b3A9NTAwLCBpbnRncm91cCkKewojIGNhbGN1bGF0ZSB0aGUgdmFyaWFuY2UgZm9yIGVhY2ggZ2VuZQogIHJ2IDwtIHJvd1ZhcnMoYXNzYXkob2JqZWN0KSkKICAjIHNlbGVjdCB0aGUgbnRvcCBnZW5lcyBieSB2YXJpYW5jZQogIHNlbGVjdCA8LSBvcmRlcihydiwgZGVjcmVhc2luZz1UUlVFKVtzZXFfbGVuKG1pbihudG9wLCBsZW5ndGgocnYpKSldCiAgIyBwZXJmb3JtIGEgUENBIG9uIHRoZSBkYXRhIGluIGFzc2F5KHgpIGZvciB0aGUgc2VsZWN0ZWQgZ2VuZXMKICBwY2EgPC0gcHJjb21wKHQoYXNzYXkob2JqZWN0KVtzZWxlY3QsXSkpCiAgIyB0aGUgY29udHJpYnV0aW9uIHRvIHRoZSB0b3RhbCB2YXJpYW5jZSBmb3IgZWFjaCBjb21wb25lbnQKICBwZXJjZW50VmFyIDwtIHBjYSRzZGV2XjIgLyBzdW0oIHBjYSRzZGV2XjIgKQogIAogIGludGdyb3VwLmRmIDwtIGFzLmRhdGEuZnJhbWUoY29sRGF0YShvYmplY3QpWywgaW50Z3JvdXAsIGRyb3A9RkFMU0VdKQogICMgYWRkIHRoZSBpbnRncm91cCBmYWN0b3JzIHRvZ2V0aGVyIHRvIGNyZWF0ZSBhIG5ldyBncm91cGluZyBmYWN0b3IKICBncm91cCA8LSBpZiAobGVuZ3RoKGludGdyb3VwKSA+IDEpIHsKICAgIGZhY3RvcihhcHBseSggaW50Z3JvdXAuZGYsIDEsIHBhc3RlLCBjb2xsYXBzZT0iOiIpKQogIH0gZWxzZSB7CiAgICBjb2xEYXRhKG9iamVjdClbW2ludGdyb3VwXV0KICB9CiAgIyBhc3NlbWJsZSB0aGUgZGF0YSBmb3IgdGhlIHBsb3QKICBkIDwtIGRhdGEuZnJhbWUoUEMxPXBjYSR4WywxXSwgUEMyPXBjYSR4WywyXSwgUEMzPXBjYSR4WywzXSwgZ3JvdXA9Z3JvdXAsIGludGdyb3VwLmRmLCBuYW1lPWNvbG5hbWVzKG9iamVjdCkpCiAgYXR0cihkLCAicGVyY2VudFZhciIpIDwtIHBlcmNlbnRWYXJbMTozXQogIHJldHVybihkKQp9CmBgYAoKYGBge3Igc2FtcGxlX2V4cH0KY29sZGF0YSA8LSBtZXRhICU+JQogIGRwbHlyOjpzZWxlY3Qoc2FtcGxlX2lkLCBnZW5vdHlwZSwgc2V4LCBhZ2UpICU+JQogIG11dGF0ZShhZ2U9YXMubnVtZXJpYyhhZ2UpKSAlPiUKICBjb2x1bW5fdG9fcm93bmFtZXMoInNhbXBsZV9pZCIpCgpkZHMgPC0gREVTZXFEYXRhU2V0RnJvbU1hdHJpeChjb3VudHMsIGNvbGRhdGEsIGRlc2lnbiA9IH4gZ2Vub3R5cGUpCmRkcyA8LSBkZHNbcm93U3Vtcyhjb3VudHMoZGRzKSkgPiAxMCxdCmRkcyRnZW5vdHlwZSA8LSByZWxldmVsKGRkcyRnZW5vdHlwZSwgcmVmID0gIkNDIikKdnNkIDwtIHZzdChkZHMsIGJsaW5kPUZBTFNFKQoKcGNhRGF0YSA8LSBwbG90UENBKHZzZCwgaW50Z3JvdXA9YygiZ2Vub3R5cGUiLCAic2V4IiwgImFnZSIpKQpwY2FEYXRhJGFnZSA8LSBmYWN0b3IocGNhRGF0YSRhZ2UpCnBlcmNlbnRWYXIgPC0gcm91bmQoMTAwICogYXR0cihwY2FEYXRhLCAicGVyY2VudFZhciIpKQpnZ3Bsb3QocGNhRGF0YSwgYWVzKHg9UEMxLHk9UEMyKSkgKyAKICBnZW9tX3BvaW50KGFlcyhzaGFwZT1zZXgsIGNvbG9yPWdlbm90eXBlLCBzaXplPWFnZSkpICsKICBzY2FsZV9zaXplX2Rpc2NyZXRlKHJhbmdlPWMoMS41LDMpKSArCiAgeGxhYihwYXN0ZTAoIlBDMTogIixwZXJjZW50VmFyWzFdLCIlIHZhcmlhbmNlIikpICsKICB5bGFiKHBhc3RlMCgiUEMyOiAiLHBlcmNlbnRWYXJbMl0sIiUgdmFyaWFuY2UiKSkgKyAKICBjb29yZF9maXhlZCgpCmdncGxvdChwY2FEYXRhLCBhZXMoeD1QQzEseT1QQzMpKSArIAogIGdlb21fcG9pbnQoYWVzKHNoYXBlPXNleCwgY29sb3I9Z2Vub3R5cGUsIHNpemU9YWdlKSkgKwogIHNjYWxlX3NpemVfZGlzY3JldGUocmFuZ2U9YygxLjUsMykpICsKICB4bGFiKHBhc3RlMCgiUEMxOiAiLHBlcmNlbnRWYXJbMV0sIiUgdmFyaWFuY2UiKSkgKwogIHlsYWIocGFzdGUwKCJQQzM6ICIscGVyY2VudFZhclszXSwiJSB2YXJpYW5jZSIpKSArIAogIGNvb3JkX2ZpeGVkKCkKCnJtKGRkcykKYGBgCgojIyBEaWZmZXJlbnRpYWwgZXhwcmVzc2lvbiB7LnRhYnNldCAudGFic2V0LWZhZGUgLnRhYnNldC1waWxsc30KIyMjIFZhcmlhbnQgdnMgV1Qgey50YWJzZXQgLnRhYnNldC1mYWRlIC50YWJzZXQtcGlsbHN9CkZvciBlYWNoIGNvbWJpbmF0aW9uIG9mIHNleCAoTSxGKSBhbmQgYWdlICg2LDE4KSB3ZSBjb21wYXJlIENUIHRvIENDIGFuZCBUVCB0byBDQy4gIApHZW5lcyB0aGF0IGhhdmUgbGVzcyB0aGFuIDEweCByZWFkcyB0b3RhbCBhcmUgZmlsdGVyZWQgb3V0IHdpdGhpbiBlYWNoIGNvbXBhcmlzb24uICAKR2VuZXMgd2l0aCBwLWFkaiA8IDAuMSBhcmUgaW4gYmx1ZS4KYGBge3IgZGVzZXFfb2JqX2d0fQpncnAgPC0gbWV0YSAlPiUKICBmaWx0ZXIoZ2Vub3R5cGUhPSJDQyIpICU+JQogIGRpc3RpbmN0KGdlbm90eXBlLCBzZXgsIGFnZSkKCmRlX3Jlc0wgPC0gbGlzdCgpCnNpZy5nZW5lc19ndCA8LSBjKCkKCmZvciAoaSBpbiAxOm5yb3coZ3JwKSkgewogICNwcmludChpKQogICMgZ2V0IGdlbm90eXBlLCBzZXgsIGFuZCBhZ2UgZm9yIHRoaXMgY29tcGFyaXNvbgogIGd0IDwtIGdycCRnZW5vdHlwZVtpXQogIHN4IDwtIGdycCRzZXhbaV0KICBhZyA8LSBncnAkYWdlW2ldCiAgZ3IgPC0gcGFzdGUoZ3QsIHN4LCBhZywgc2VwPSJfIikKICAKICAjIGdldCBzYW1wbGVfaWQgYW5kIGdyb3VwaW5nIGZhY3RvciAoZ2Vub3R5cGUpIGZvciB0aGlzIGNvbXBhcmlzb24KICBjb2xkYXRhIDwtIG1ldGEgJT4lCiAgICBmaWx0ZXIoZ2Vub3R5cGUgJWluJSBjKCJDQyIsZ3QpICYgc2V4ID09IHN4ICYgYWdlID09IGFnKSAlPiUKICAgIGRwbHlyOjpzZWxlY3QoZ2Vub3R5cGUsIHNhbXBsZV9pZCkgJT4lCiAgICBjb2x1bW5fdG9fcm93bmFtZXMoInNhbXBsZV9pZCIpCgogIGN0cyA8LSBjb3VudHNbLCByb3duYW1lcyhjb2xkYXRhKV0KCiAgIyBERVNlcSBvYmplY3QgYW5kIGFuYWx5c2lzCiAgZGRzIDwtIERFU2VxRGF0YVNldEZyb21NYXRyaXgoY3RzLCBjb2xkYXRhLCBkZXNpZ24gPSB+IGdlbm90eXBlKQogIGRkcyA8LSBkZHNbcm93U3Vtcyhjb3VudHMoZGRzKSkgPiAxMCxdCiAgZGRzJGdlbm90eXBlIDwtIHJlbGV2ZWwoZGRzJGdlbm90eXBlLCByZWYgPSAiQ0MiKQogIGRkcyA8LSBERVNlcShkZHMpIAogCiAgIyBleHRyYWN0IERFc2VxIHJlc3VsdHMKICByZXMgPC0gcmVzdWx0cyhkZHMpCiAgcmVzIDwtIHJlc1tvcmRlcihyZXMpLF0KICBkZV9yZXNMW1tncl1dIDwtIHJlcwogIAogICMgZ2V0IGdlbmVzIHNpZ25pZmljYW50IGF0IHBhZGogPCAwLjEKICBzaWcuZyA8LSBhcy5kYXRhLmZyYW1lKHJlc1t3aGljaChyZXMkcGFkajwwLjEpLF0pCiAgaWYgKG5yb3coc2lnLmcpID4gMCkgewogICAgc2lnLmcgPC0gY2JpbmQoY29tcGFyaXNvbj1nciwgc2lnLmcpICU+JQogICAgICBhcnJhbmdlKGRlc2MocGFkaikpICU+JQogICAgICByb3duYW1lc190b19jb2x1bW4odmFyPSdlbnNlbWJsX2dlbmVfaWQnKQogICAgIyBhZGQgZ2VuZSBzeW1ib2wKICAgIGVuc2VtYmwgPC0gYmlvbWFSdDo6dXNlTWFydCgiZW5zZW1ibCIsIGRhdGFzZXQ9Im1tdXNjdWx1c19nZW5lX2Vuc2VtYmwiKQogICAgbWdpX3N5bWJvbCA8LSBiaW9tYVJ0OjpnZXRCTShhdHRyaWJ1dGVzPWMoJ2Vuc2VtYmxfZ2VuZV9pZCcsJ2V4dGVybmFsX2dlbmVfbmFtZScpLAogICAgICAgICAgICAgZmlsdGVycyA9ICdlbnNlbWJsX2dlbmVfaWQnLAogICAgICAgICAgICAgdmFsdWVzID0gc2lnLmckZW5zZW1ibF9nZW5lX2lkLAogICAgICAgICAgICAgbWFydCA9IGVuc2VtYmwpICU+JQogICAgICBkcGx5cjo6cmVuYW1lKCJtZ2lfc3ltYm9sIj0iZXh0ZXJuYWxfZ2VuZV9uYW1lIikKICAgIHNpZy5nIDwtIGxlZnRfam9pbihzaWcuZywgbWdpX3N5bWJvbCwgYnk9J2Vuc2VtYmxfZ2VuZV9pZCcpCiAgICBzaWcuZ2VuZXNfZ3QgPC0gcmJpbmQoc2lnLmdlbmVzX2d0LCBzaWcuZykKICB9CiAgCiAgcm0oZ3QsIHN4LCBhZywgY29sZGF0YSwgY3RzLCBkZHMsIHJlcywgc2lnLmcpCn0KCmBgYAoKYGBge3IgZGVzZXFfcmVzX2d0LCByZXN1bHRzPSdhc2lzJ30KZm9yKGdyIGluIG5hbWVzKGRlX3Jlc0wpKXsKICBjYXQoIiMjIyMgIiwgZ3IgLCJcbiIpCiAgcmVzIDwtIGRlX3Jlc0xbW2dyXV0KICBjYXQocGFzdGUwKCJDb21wYXJpbmcgIiwgZ3IsICIgdG8gIiwgc3RyX3JlcGxhY2UoZ3IsICJDVHxUVCIsICJDQyIpKSwgIlxuIikKICBjYXQocGxvdE1BKHJlcyksICJcbiIpCiAgI2NhdCgiXG4iLCAic2lnbmlmaWNhbnQgZ2VuZXM6XG4iLCByb3duYW1lcyhyZXMpW3doaWNoKHJlcyRwYWRqPDAuMSldKQogIGNhdCgnXG5cbicpCn0KCmRlX3Jlc0xfZ3QgPC0gZGVfcmVzTApybShkZV9yZXNMKQpgYGAKCiMjIyBPbGQgdnMgWW91bmcgey50YWJzZXQgLnRhYnNldC1mYWRlIC50YWJzZXQtcGlsbHN9CgpGb3IgZWFjaCBjb21iaW5hdGlvbiBvZiBzZXggKE0sRikgYW5kIGdlbm90eXBlIChDQywgQ1QsIFRUKSB3ZSBjb21wYXJlIG9sZCB0byB5b3VuZyBzYW1wbGVzICgxOCB2cyA2IG1vbnRocykuICAKR2VuZXMgdGhhdCBoYXZlIGxlc3MgdGhhbiAxMHggcmVhZHMgdG90YWwgYXJlIGZpbHRlcmVkIG91dCB3aXRoaW4gZWFjaCBjb21wYXJpc29uLiAgCkdlbmVzIHdpdGggcC1hZGogPCAwLjEgYXJlIGluIGJsdWUuCmBgYHtyIGRlc2VxX29ial9hZ2V9CmdycCA8LSBtZXRhICU+JQogIGZpbHRlcihhZ2UhPSI2IikgJT4lCiAgZGlzdGluY3QoZ2Vub3R5cGUsIHNleCwgYWdlKQoKZGVfcmVzTCA8LSBsaXN0KCkKc2lnLmdlbmVzX2FnZSA8LSBjKCkKCmZvciAoaSBpbiAxOm5yb3coZ3JwKSkgewogICNwcmludChpKQogICMgZ2V0IGdlbm90eXBlLCBzZXgsIGFuZCBhZ2UgZm9yIHRoaXMgY29tcGFyaXNvbgogIGd0IDwtIGdycCRnZW5vdHlwZVtpXQogIHN4IDwtIGdycCRzZXhbaV0KICBhZyA8LSBncnAkYWdlW2ldCiAgZ3IgPC0gcGFzdGUoZ3QsIHN4LCBhZywgc2VwPSJfIikKICAKICAjIGdldCBzYW1wbGVfaWQgYW5kIGdyb3VwaW5nIGZhY3RvciAoYWdlKSBmb3IgdGhpcyBjb21wYXJpc29uCiAgY29sZGF0YSA8LSBtZXRhICU+JQogICAgZmlsdGVyKHNleCA9PSBzeCAmIGdlbm90eXBlID09IGd0KSAlPiUKICAgIGRwbHlyOjpzZWxlY3QoYWdlLCBzYW1wbGVfaWQpICU+JQogICAgY29sdW1uX3RvX3Jvd25hbWVzKCJzYW1wbGVfaWQiKQoKICBjdHMgPC0gY291bnRzWywgcm93bmFtZXMoY29sZGF0YSldCgogICMgREVTZXEgb2JqZWN0IGFuZCBhbmFseXNpcwogIGRkcyA8LSBERVNlcURhdGFTZXRGcm9tTWF0cml4KGN0cywgY29sZGF0YSwgZGVzaWduID0gfiBhZ2UpCiAgZGRzIDwtIGRkc1tyb3dTdW1zKGNvdW50cyhkZHMpKSA+IDEwLF0KICBkZHMkYWdlIDwtIHJlbGV2ZWwoZGRzJGFnZSwgcmVmID0gIjYiKQogIGRkcyA8LSBERVNlcShkZHMpICMgZGlmZmVyZW50aWFsIGV4cHJlc3Npb24gYW5hbHlzaXMKIAogICMgZXh0cmFjdCBERXNlcSByZXN1bHRzCiAgcmVzIDwtIHJlc3VsdHMoZGRzKQogIHJlcyA8LSByZXNbb3JkZXIocmVzKSxdCiAgZGVfcmVzTFtbZ3JdXSA8LSByZXMKICAKICAjIGdldCBnZW5lcyBzaWduaWZpY2FudCBhdCBwYWRqIDwgMC4xCiAgc2lnLmcgPC0gYXMuZGF0YS5mcmFtZShyZXNbd2hpY2gocmVzJHBhZGo8MC4xKSxdKQogIGlmIChucm93KHNpZy5nKSA+IDApIHsKICAgIHNpZy5nIDwtIGNiaW5kKGNvbXBhcmlzb249Z3IsIHNpZy5nKSAlPiUKICAgICAgYXJyYW5nZShkZXNjKHBhZGopKSAlPiUKICAgICAgcm93bmFtZXNfdG9fY29sdW1uKHZhcj0nZW5zZW1ibF9nZW5lX2lkJykKICAgICMgYWRkIGdlbmUgc3ltYm9sCiAgICBlbnNlbWJsIDwtIGJpb21hUnQ6OnVzZU1hcnQoImVuc2VtYmwiLCBkYXRhc2V0PSJtbXVzY3VsdXNfZ2VuZV9lbnNlbWJsIikKICAgIG1naV9zeW1ib2wgPC0gYmlvbWFSdDo6Z2V0Qk0oYXR0cmlidXRlcz1jKCdlbnNlbWJsX2dlbmVfaWQnLCdleHRlcm5hbF9nZW5lX25hbWUnKSwKICAgICAgICAgICAgIGZpbHRlcnMgPSAnZW5zZW1ibF9nZW5lX2lkJywKICAgICAgICAgICAgIHZhbHVlcyA9IHNpZy5nJGVuc2VtYmxfZ2VuZV9pZCwKICAgICAgICAgICAgIG1hcnQgPSBlbnNlbWJsKSAlPiUKICAgICAgZHBseXI6OnJlbmFtZSgibWdpX3N5bWJvbCI9ImV4dGVybmFsX2dlbmVfbmFtZSIpCiAgICBzaWcuZyA8LSBsZWZ0X2pvaW4oc2lnLmcsIG1naV9zeW1ib2wsIGJ5PSdlbnNlbWJsX2dlbmVfaWQnKQogICAgc2lnLmdlbmVzX2FnZSA8LSByYmluZChzaWcuZ2VuZXNfYWdlLCBzaWcuZykKICB9CgogIHJtKGd0LCBzeCwgYWcsIGNvbGRhdGEsIGN0cywgZGRzLCByZXMsIHNpZy5nKQp9CmBgYAoKYGBge3IgZGVzZXFfcmVzX2FnZSwgcmVzdWx0cz0nYXNpcyd9CmZvcihnciBpbiBuYW1lcyhkZV9yZXNMKSl7CiAgY2F0KCIjIyMjICIsIGdyICwiXG4iKQogIHJlcyA8LSBkZV9yZXNMW1tncl1dCiAgY2F0KHBhc3RlMCgiQ29tcGFyaW5nICIsIGdyLCAiIHRvICIsIHN0cl9yZXBsYWNlKGdyLCAiMTgiLCAiNiIpKSwgIlxuIikKICBjYXQocGxvdE1BKHJlcyksICJcbiIpCiAgI2NhdCgiXG4iLCAic2lnbmlmaWNhbnQgZ2VuZXM6XG4iLCByb3duYW1lcyhyZXMpW3doaWNoKHJlcyRwYWRqPDAuMSldKQogIGNhdCgnXG5cbicpCn0KCmRlX3Jlc0xfYWdlIDwtIGRlX3Jlc0wKcm0oZGVfcmVzTCkKYGBgCgojIyBPdXRwdXQKU2F2aW5nIERFRyBsaXN0cyB0byBwcm9qZWN0IGZvbGRlcgpgYGB7ciBvdXRwdXRfc2F2ZX0Kd3JpdGVfY3N2KHNpZy5nZW5lc19ndCwKICAgICAgICAgICAgZmlsZT0ib3V0cHV0L1JOQXNlcS8yX0RpZmZlcmVudGlhbF9FeHByZXNzaW9uL3NpZ19kZWdfcGFkajAxX2d0LmNzdiIpCgp3cml0ZV9jc3Yoc2lnLmdlbmVzX2FnZSwgCiAgICAgICAgICAgIGZpbGU9Im91dHB1dC9STkFzZXEvMl9EaWZmZXJlbnRpYWxfRXhwcmVzc2lvbi9zaWdfZGVnX3BhZGowMV9hZ2UuY3N2IikKCnNhdmVSRFMoZGVfcmVzTF9ndCwgZmlsZT0ib3V0cHV0L1JOQXNlcS8yX0RpZmZlcmVudGlhbF9FeHByZXNzaW9uL3NpZ19kZWdfZ3QuUkRTIikKc2F2ZVJEUyhkZV9yZXNMX2FnZSwgZmlsZT0ib3V0cHV0L1JOQXNlcS8yX0RpZmZlcmVudGlhbF9FeHByZXNzaW9uL3NpZ19kZWdfYWdlLlJEUyIpCmBgYAoKVXBsb2FkaW5nIERFRyBsaXN0cyB0byBbc3luYXBzZV0oaHR0cHM6Ly93d3cuc3luYXBzZS5vcmcvIyFTeW5hcHNlOnN5bjI1MTc0NDg5KQpgYGB7ciBvdXRwdXRfc3luYXBzZSwgcmVzdWx0cz0naGlkZSd9CnN5bkxvZ2luKCkgCiMjIHZhcmlhbnQgdnMgd3QKZmlsZSA8LSBGaWxlKCJvdXRwdXQvUk5Bc2VxLzJfRGlmZmVyZW50aWFsX0V4cHJlc3Npb24vc2lnX2RlZ19wYWRqMDFfZ3QuY3N2IiwKICAgICAgICAgICAgIGNvbnRlbnRUeXBlID0gInRleHQvcGxhaW4iLAogICAgICAgICAgICAgZGVzY3JpcHRpb24gPSAibGlzdHMgb2YgZGlmZmVyZW50aWFsbHkgZXhwcmVzc2VkIGdlbmVzOyB2YXJpYW50IHZzIHd0IiwKICAgICAgICAgICAgIHBhcmVudCA9ICJzeW4yNTE3NDQ4OSIpCgpwcm92ZW5hbmNlIDwtIEFjdGl2aXR5KHVzZWQgPSBjKCJzeW4yNTgzNDA0MyIsICJzeW4yNTgzNDA0NCIpLAogICAgICAgICAgICAgICAgICAgICAgIGV4ZWN1dGVkID0gImh0dHBzOi8vZ2l0aHViLmNvbS9UaGVKYWNrc29uTGFib3JhdG9yeS9NVEhGUl9DNjY3VC9ibG9iL21hc3Rlci9STkFzZXFfMl9EaWZmZXJlbnRpYWxfRXhwcmVzc2lvbi5SbWQiKQoKZmlsZSA8LSBzeW5TdG9yZShmaWxlLCBhY3Rpdml0eT1wcm92ZW5hbmNlKQoKIyAxOCB2cyA2IG1vbnRocwpmaWxlIDwtIEZpbGUoIm91dHB1dC9STkFzZXEvMl9EaWZmZXJlbnRpYWxfRXhwcmVzc2lvbi9zaWdfZGVnX3BhZGowMV9hZ2UuY3N2IiwKICAgICAgICAgICAgIGNvbnRlbnRUeXBlID0gInRleHQvcGxhaW4iLAogICAgICAgICAgICAgZGVzY3JpcHRpb24gPSAibGlzdHMgb2YgZGlmZmVyZW50aWFsbHkgZXhwcmVzc2VkOyAxOCB2cyA2IG1vbnRocyIsCiAgICAgICAgICAgICBwYXJlbnQgPSAic3luMjUxNzQ0ODkiKQoKcHJvdmVuYW5jZSA8LSBBY3Rpdml0eSh1c2VkID0gIGMoInN5bjI1ODM0MDQzIiwgInN5bjI1ODM0MDQ0IiksCiAgICAgICAgICAgICAgICAgICAgICAgZXhlY3V0ZWQgPSAiaHR0cHM6Ly9naXRodWIuY29tL1RoZUphY2tzb25MYWJvcmF0b3J5L01USEZSX0M2NjdUL2Jsb2IvbWFzdGVyL1JOQXNlcV8yX0RpZmZlcmVudGlhbF9FeHByZXNzaW9uLlJtZCIpCgpmaWxlIDwtIHN5blN0b3JlKGZpbGUsIGFjdGl2aXR5PXByb3ZlbmFuY2UpCgpgYGAK</div>
 
 
 </div>
@@ -774,6 +806,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
+  window.initializeSourceEmbed("RNAseq_2_Differential_Expression.Rmd");
   window.initializeCodeFolding("hide" === "show");
 });
 </script>

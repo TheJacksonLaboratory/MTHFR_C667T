@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Annat Haber" />
+
+<meta name="date" content="2021-06-04" />
+
+<title>RRBS Differential Methylation</title>
+
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cerulean.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
+<script src="site_libs/navigation-1.1/sourceembed.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-5.1.0/css/v4-shims.css" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+#rmd-source-code {
+  display: none;
+}
+</style>
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.tab('show');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-sm-12 col-md-4 col-lg-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-sm-12 col-md-8 col-lg-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">MTHFR C667T epigenetics</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    RRBS Pilot
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="RRBS_Pilot_0_Sample_Metadata.html">Sample Metadata</a>
+    </li>
+    <li>
+      <a href="RRBS_Pilot_1_Processing_QC.html">Processing and QC</a>
+    </li>
+    <li>
+      <a href="RRBS_Pilot_2_Exploratory_Analysis.html">Exploratory Analysis</a>
+    </li>
+    <li>
+      <a href="RRBS_Pilot_3_Differential_Methylation.html">Differential Methylation</a>
+    </li>
+    <li class="dropdown-header">Methylation by Position</li>
+  </ul>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    RNAseq
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="RNAseq_0_Sample_Metadata.html">Sample Metadata</a>
+    </li>
+    <li>
+      <a href="RNAseq_1_Processing_QC.html">Processing and QC</a>
+    </li>
+    <li>
+      <a href="RNAseq_2_Differential_Expression.html">Differential Expression</a>
+    </li>
+  </ul>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    RRBS
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="RRBS_0_Sample_Metadata.html">Sample Metadata</a>
+    </li>
+    <li>
+      <a href="RRBS_1_Processing_QC.html">Processing and QC</a>
+    </li>
+    <li>
+      <a href="RRBS_2_Exploratory_Analysis.html">Exploratory Analysis</a>
+    </li>
+    <li>
+      <a href="RRBS_3_Differential_Methylation_gt.html">Differential Methylation; pooled sex and age</a>
+    </li>
+    <li>
+      <a href="RRBS_3_Differential_Methylation_gtsxag.html">Differential Methylation; separate sex and age</a>
+    </li>
+    <li class="dropdown-header">Methylation by Position</li>
+  </ul>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/TheJacksonLaboratory/MTHFR_C667T">
+    <span class="fab fa-github"></span>
+     
+  </a>
+</li>
+<li>
+  <a href="mailto:&lt;annat.haber@jax.org&gt;">
+    <span class="fas fa-paper-plane"></span>
+     
+  </a>
+</li>
+<li>
+  <a href="https://www.dropbox.com/home/MTHFR">
+    <span class="fab fa-dropbox"></span>
+     
+  </a>
+</li>
+<li>
+  <a href="https://www.synapse.org/#!Synapse:syn23573590/wiki/607402">
+    <span class="fas fa-project-diagram"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+<li role="separator" class="divider"></li>
+<li><a id="rmd-download-source" href="#">Download Rmd</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore">RRBS Differential Methylation</h1>
+<h3 class="subtitle">Separated by genotype, age, and sex</h3>
+<h4 class="author">Annat Haber</h4>
+<h4 class="date">2021-06-04</h4>
+
+</div>
+
+
+<pre class="r"><code>knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(cache = TRUE, 
+                      #cache.path = &quot;output/RRBS/3_Differential_Methylation&quot;,
+                      message=FALSE, warning=FALSE)</code></pre>
+<pre class="r"><code>rm(list=ls())
+
+suppressPackageStartupMessages({
+  library(methylKit)
+  library(synapser)
+  library(tidyverse)
+  library(GenomicRanges)
+  library(genomation)
+  library(ChIPpeakAnno)
+  library(clusterProfiler)
+  library(GOsummaries)
+  library(org.Mm.eg.db)
+  library(biomaRt)
+  library(vcd)
+})</code></pre>
+<div id="input" class="section level2">
+<h2>Input</h2>
+<p>Read sample metadata and methylation calls.<br />
+Genotypes were already switched for two samples (34158 from TT to CT; 34163 from CT to TT)</p>
+<pre class="r"><code>united_meth &lt;- readRDS(file=&quot;output/RRBS/1_Processing_QC/united_meth.RDS&quot;)
+meta &lt;- read_csv(file=&quot;output/RRBS/2_Exploratory_Analysis/RRBS_globalmeth_hmc.csv&quot;,
+                 col_types = cols(.default = &quot;c&quot;))</code></pre>
+<pre class="r"><code>synLogin() 
+
+united_meth &lt;- readRDS(synGet(&quot;syn25834047&quot;)$path)
+meta &lt;- read_csv(synGet(&quot;syn25834048&quot;)$path,
+                 col_types = cols(.default = &quot;c&quot;))</code></pre>
+</div>
+<div id="differentially-methylated-cpg-sites" class="section level2 tabset tabset-fade tabset-pills">
+<h2>differentially Methylated CpG sites</h2>
+<p>Finding differentially methylated CpG sites separately for age groups and sex.<br />
+Mapping to known genes by finding overlap between the snp’s and mm10 reference.<br />
+The reference annotation was downloaded directly from <a href="http://genome.ucsc.edu/cgi-bin/hgTables" class="uri">http://genome.ucsc.edu/cgi-bin/hgTables</a></p>
+<pre class="r"><code># read reference and convert to GRanges
+refseq &lt;- read_tsv(&quot;data/mm10.refseq.genes.txt&quot;) 
+
+ref.gr &lt;- GRanges(
+        seqnames = substr(refseq$chrom, 4,5),
+        ranges=IRanges(start = refseq$txStart, end = refseq$txEnd),
+        mgi_name=refseq$name2
+        )
+names(ref.gr) &lt;- refseq$name
+rm(refseq)</code></pre>
+<div id="variant-vs-wt" class="section level3 tabset tabset-fade tabset-pills">
+<h3>Variant vs WT</h3>
+<p>For each combination of sex (M,F) and age (6,18) we compare CT to CC and TT to CC. Top genes are identified as significant at qvalue &lt; 0.01 and methylation difference &gt;10</p>
+<pre class="r"><code>grp &lt;- meta %&gt;%
+  filter(genotype!=&quot;CC&quot;) %&gt;%
+  distinct(genotype, sex, age)
+
+diffML_gt &lt;- sig.snpL_gt &lt;- list()
+
+for (i in 1:nrow(grp)) {
+  #print(i)
+  # get genotype, sex, and age for this comparison
+  gt &lt;- grp$genotype[i]
+  sx &lt;- grp$sex[i]
+  ag &lt;- grp$age[i]
+  gr &lt;- paste(gt, sx, ag, sep=&quot;_&quot;)
+  
+  # get sample_id and grouping factor (genotype) for this comparison
+  cov &lt;- meta %&gt;%
+    filter(genotype %in% c(&quot;CC&quot;,gt) &amp; sex == sx &amp; age == ag) %&gt;%
+    mutate(genotype = ifelse(genotype==gt, 1, 0)) %&gt;%
+    dplyr::select(sample_id, genotype, sex, age)
+  
+  # DiffMeth object and analysis
+  diffM &lt;- reorganize(united_meth, 
+                       sample.ids = cov$sample_id, 
+                       treatment= cov$genotype) %&gt;%
+            calculateDiffMeth()
+  
+  # extract significant sites and convert to GRanges
+  snp.gr &lt;- getMethylDiff(diffM, difference = 10, qvalue=0.01, type=&quot;all&quot;) %&gt;%
+    as(&quot;GRanges&quot;)
+  names(snp.gr) &lt;- paste(snp.gr@seqnames@values, snp.gr@ranges@start, sep=&quot;:&quot;)
+
+  # Find overlap with reference
+  overlap &lt;- findOverlaps(snp.gr, ref.gr)
+  hits &lt;- ref.gr$mgi_name[slot(overlap, &quot;to&quot;)]
+  names(hits) &lt;- names(snp.gr)[slot(overlap, &quot;from&quot;)]
+  hits &lt;- hits[!duplicated(hits)]
+  snpDMgenes &lt;- snp.gr[names(hits),]
+  mcols(snpDMgenes)$mgi_name &lt;- hits
+  
+  snpDMgenes &lt;- data.frame(snpDMgenes) %&gt;%
+    dplyr::select(chromosome=seqnames, everything()) %&gt;%
+    arrange(chromosome, meth.diff)
+  
+  diffML_gt[[gr]] &lt;- diffM
+  sig.snpL_gt[[gr]] &lt;- snpDMgenes
+  
+  rm(gt, sx, ag, cov, diffM, snp.gr, overlap, hits, snpDMgenes)
+}</code></pre>
+<pre class="r"><code>for(gr in names(diffML_gt)){
+  cat(&quot;#### &quot;, gr ,&quot;\n&quot;)
+  diffM &lt;- diffML_gt[[gr]]
+  cat(paste0(&quot;Comparing &quot;, gr, &quot; to &quot;, str_replace(gr, &quot;CT|TT&quot;, &quot;CC&quot;)), &quot;\n&quot;)
+  diffMethPerChr(diffM, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=10)
+  diffMethPerChr(diffM, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)
+  cat(&#39;\n\n&#39;)
+}</code></pre>
+<div id="ct_f_18" class="section level4">
+<h4>CT_F_18</h4>
+<p>Comparing CT_F_18 to CC_F_18 <img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-1.png" width="672" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-2.png" width="672" /></p>
+</div>
+<div id="ct_m_18" class="section level4">
+<h4>CT_M_18</h4>
+<p>Comparing CT_M_18 to CC_M_18 <img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-3.png" width="672" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-4.png" width="672" /></p>
+</div>
+<div id="ct_f_6" class="section level4">
+<h4>CT_F_6</h4>
+<p>Comparing CT_F_6 to CC_F_6 <img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-5.png" width="672" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-6.png" width="672" /></p>
+</div>
+<div id="ct_m_6" class="section level4">
+<h4>CT_M_6</h4>
+<p>Comparing CT_M_6 to CC_M_6 <img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-7.png" width="672" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-8.png" width="672" /></p>
+</div>
+<div id="tt_f_18" class="section level4">
+<h4>TT_F_18</h4>
+<p>Comparing TT_F_18 to CC_F_18 <img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-9.png" width="672" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-10.png" width="672" /></p>
+</div>
+<div id="tt_m_18" class="section level4">
+<h4>TT_M_18</h4>
+<p>Comparing TT_M_18 to CC_M_18 <img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-11.png" width="672" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-12.png" width="672" /></p>
+</div>
+<div id="tt_f_6" class="section level4">
+<h4>TT_F_6</h4>
+<p>Comparing TT_F_6 to CC_F_6 <img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-13.png" width="672" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-14.png" width="672" /></p>
+</div>
+<div id="tt_m_6" class="section level4">
+<h4>TT_M_6</h4>
+<p>Comparing TT_M_6 to CC_M_6 <img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-15.png" width="672" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_gt-16.png" width="672" /></p>
+<pre class="r"><code>rm(diffM)</code></pre>
+</div>
+</div>
+<div id="old-vs-young" class="section level3 tabset tabset-fade tabset-pills">
+<h3>Old vs Young</h3>
+<p>For each combination of sex (M,F) and genotype (CC, CT, TT) we compare old to young samples (18 vs 6 months).<br />
+Top genes are identified as significant at qvalue &lt; 0.01 and methylation difference &gt;10</p>
+<pre class="r"><code>grp &lt;- meta %&gt;%
+  filter(age==&quot;18&quot;) %&gt;%
+  distinct(genotype, sex, age)
+
+diffML_age &lt;- sig.snpL_age &lt;- list()
+
+for (i in 1:nrow(grp)) {
+  #print(i)
+  # get genotype, sex, and age for this comparison
+  gt &lt;- grp$genotype[i]
+  sx &lt;- grp$sex[i]
+  ag &lt;- grp$age[i]
+  gr &lt;- paste(gt, sx, ag, sep=&quot;_&quot;)
+  
+  # get sample_id and grouping factor (genotype) for this comparison
+  cov &lt;- meta %&gt;%
+    filter(sex == sx &amp; genotype == gt) %&gt;%
+    mutate(age = ifelse(age==&quot;18&quot;, 1, 0)) %&gt;%
+    dplyr::select(sample_id, genotype, sex, age)
+  
+  # DiffMeth object and analysis
+  diffM &lt;- reorganize(united_meth, 
+                       sample.ids = cov$sample_id, 
+                       treatment= cov$age) %&gt;%
+            calculateDiffMeth()
+  
+  # extract significant sites and convert to GRanges
+  snp.gr &lt;- getMethylDiff(diffM, difference = 10, qvalue=0.01, type=&quot;all&quot;) %&gt;%
+    as(&quot;GRanges&quot;)
+  names(snp.gr) &lt;- paste(snp.gr@seqnames@values, snp.gr@ranges@start, sep=&quot;:&quot;)
+
+  # Find overlap with reference
+  overlap &lt;- findOverlaps(snp.gr, ref.gr)
+  hits &lt;- ref.gr$mgi_name[slot(overlap, &quot;to&quot;)]
+  names(hits) &lt;- names(snp.gr)[slot(overlap, &quot;from&quot;)]
+  hits &lt;- hits[!duplicated(hits)]
+  snpDMgenes &lt;- snp.gr[names(hits),]
+  mcols(snpDMgenes)$mgi_name &lt;- hits
+  
+  snpDMgenes &lt;- data.frame(snpDMgenes) %&gt;%
+    dplyr::select(chromosome=seqnames, everything()) %&gt;%
+    arrange(chromosome, meth.diff)
+  
+  diffML_age[[gr]] &lt;- diffM
+  sig.snpL_age[[gr]] &lt;- snpDMgenes
+  
+  rm(gt, sx, ag, cov, diffM, snp.gr, overlap, hits, snpDMgenes)
+}</code></pre>
+<pre class="r"><code>for(gr in names(diffML_age)){
+  cat(&quot;#### &quot;, gr ,&quot;\n&quot;)
+  diffM &lt;- diffML_age[[gr]]
+  cat(paste0(&quot;Comparing &quot;, gr, &quot; to &quot;, str_replace(gr, &quot;18&quot;, &quot;6&quot;)), &quot;\n&quot;)
+  diffMethPerChr(diffM, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=10)
+  diffMethPerChr(diffM, plot=TRUE, qvalue.cutoff=0.01, meth.cutoff=0)
+  cat(&#39;\n\n&#39;)
+}</code></pre>
+<div id="cc_f_18" class="section level4">
+<h4>CC_F_18</h4>
+<p>Comparing CC_F_18 to CC_F_6 <img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_age-1.png" width="672" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_age-2.png" width="672" /></p>
+</div>
+<div id="cc_m_18" class="section level4">
+<h4>CC_M_18</h4>
+<p>Comparing CC_M_18 to CC_M_6 <img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_age-3.png" width="672" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_age-4.png" width="672" /></p>
+</div>
+<div id="ct_f_18-1" class="section level4">
+<h4>CT_F_18</h4>
+<p>Comparing CT_F_18 to CT_F_6 <img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_age-5.png" width="672" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_age-6.png" width="672" /></p>
+</div>
+<div id="ct_m_18-1" class="section level4">
+<h4>CT_M_18</h4>
+<p>Comparing CT_M_18 to CT_M_6 <img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_age-7.png" width="672" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_age-8.png" width="672" /></p>
+</div>
+<div id="tt_f_18-1" class="section level4">
+<h4>TT_F_18</h4>
+<p>Comparing TT_F_18 to TT_F_6 <img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_age-9.png" width="672" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_age-10.png" width="672" /></p>
+</div>
+<div id="tt_m_18-1" class="section level4">
+<h4>TT_M_18</h4>
+<p>Comparing TT_M_18 to TT_M_6 <img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_age-11.png" width="672" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/diffM_plot_age-12.png" width="672" /></p>
+<pre class="r"><code>rm(diffM)</code></pre>
+</div>
+</div>
+</div>
+<div id="gene-parts-annotation" class="section level2 tabset tabset-fade tabset-pills">
+<h2>Gene parts annotation</h2>
+<p>Gene parts distribution for differentially-methylated sites, defines with qvalue &lt; 0.01 and methylation difference &gt;10</p>
+<pre class="r"><code>gene.obj=readTranscriptFeatures(&quot;data/mm10.refseq.genes.bed&quot;)
+cpg.obj=readFeatureFlank(&quot;data/mm10.refseq.genes.bed&quot;,
+                           feature.flank.name=c(&quot;CpGi&quot;,&quot;shores&quot;))</code></pre>
+<div id="variant-vs-wt-1" class="section level3 tabset tabset-fade tabset-pills">
+<h3>Variant vs WT</h3>
+<pre class="r"><code>for(gr in names(diffML_gt)){
+  cat(&quot;#### &quot;, gr ,&quot;\n&quot;)
+  diffM &lt;- diffML_gt[[gr]]
+  cat(paste0(&quot;Comparing &quot;, gr, &quot; to &quot;, str_replace(gr, &quot;CT|TT&quot;, &quot;CC&quot;)), &quot;\n&quot;, &quot;\n&quot;)
+  # hypermethylated sites with difference &gt; 10%
+  diffM10.hyper &lt;- getMethylDiff(diffM, difference=10, qvalue=0.01, type=&quot;hyper&quot;) %&gt;%
+    as(&quot;GRanges&quot;)
+  annotateWithGeneParts(diffM10.hyper,  gene.obj) %&gt;%
+     plotTargetAnnotation(precedence=TRUE,
+                       main=&quot;Hyper-methylated gene parts; &gt; 10% diff.&quot;)
+  
+  annotateWithFeatureFlank(diffM10.hyper,
+                                    cpg.obj$CpGi,cpg.obj$shores,
+                                    feature.name=&quot;CpGi&quot;,flank.name=&quot;shores&quot;) %&gt;%
+    plotTargetAnnotation(col=c(&quot;green&quot;,&quot;gray&quot;,&quot;white&quot;),
+                       main=&quot;Hyper-methylated flank annotation; &gt; 10% diff.&quot;)
+
+
+  # hypomethylated sites with difference &gt; 10%
+  diffM10.hypo &lt;- getMethylDiff(diffM, difference=10, qvalue=0.01, type=&quot;hypo&quot;) %&gt;%
+    as(&quot;GRanges&quot;)
+  annotateWithGeneParts(diffM10.hypo,  gene.obj) %&gt;%
+     plotTargetAnnotation(precedence=TRUE,
+                       main=&quot;Hypo-methylated gene parts; &gt; 10% diff.&quot;)
+  
+  annotateWithFeatureFlank(diffM10.hypo,
+                                    cpg.obj$CpGi,cpg.obj$shores,
+                                    feature.name=&quot;CpGi&quot;,flank.name=&quot;shores&quot;) %&gt;%
+    plotTargetAnnotation(col=c(&quot;green&quot;,&quot;gray&quot;,&quot;white&quot;),
+                       main=&quot;Hypo-methylated flank annotation; &gt; 10% diff.&quot;)
+  
+  cat(&#39;\n\n&#39;)
+}</code></pre>
+<div id="ct_f_18-2" class="section level4">
+<h4>CT_F_18</h4>
+<p>Comparing CT_F_18 to CC_F_18</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-1.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-2.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-3.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-4.png" width="50%" /></p>
+</div>
+<div id="ct_m_18-2" class="section level4">
+<h4>CT_M_18</h4>
+<p>Comparing CT_M_18 to CC_M_18</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-5.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-6.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-7.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-8.png" width="50%" /></p>
+</div>
+<div id="ct_f_6-1" class="section level4">
+<h4>CT_F_6</h4>
+<p>Comparing CT_F_6 to CC_F_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-9.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-10.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-11.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-12.png" width="50%" /></p>
+</div>
+<div id="ct_m_6-1" class="section level4">
+<h4>CT_M_6</h4>
+<p>Comparing CT_M_6 to CC_M_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-13.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-14.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-15.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-16.png" width="50%" /></p>
+</div>
+<div id="tt_f_18-2" class="section level4">
+<h4>TT_F_18</h4>
+<p>Comparing TT_F_18 to CC_F_18</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-17.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-18.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-19.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-20.png" width="50%" /></p>
+</div>
+<div id="tt_m_18-2" class="section level4">
+<h4>TT_M_18</h4>
+<p>Comparing TT_M_18 to CC_M_18</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-21.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-22.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-23.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-24.png" width="50%" /></p>
+</div>
+<div id="tt_f_6-1" class="section level4">
+<h4>TT_F_6</h4>
+<p>Comparing TT_F_6 to CC_F_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-25.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-26.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-27.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-28.png" width="50%" /></p>
+</div>
+<div id="tt_m_6-1" class="section level4">
+<h4>TT_M_6</h4>
+<p>Comparing TT_M_6 to CC_M_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-29.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-30.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-31.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_gt-32.png" width="50%" /></p>
+</div>
+</div>
+<div id="old-vs-young-1" class="section level3 tabset tabset-fade tabset-pills">
+<h3>Old vs Young</h3>
+<pre class="r"><code>for(gr in names(diffML_age)){
+  cat(&quot;#### &quot;, gr ,&quot;\n&quot;)
+  diffM &lt;- diffML_age[[gr]]
+  cat(paste0(&quot;Comparing &quot;, gr, &quot; to &quot;, str_replace(gr, &quot;18&quot;, &quot;6&quot;)), &quot;\n&quot;, &quot;\n&quot;)
+  # hypermethylated sites with difference &gt; 10%
+  diffM10.hyper &lt;- getMethylDiff(diffM, difference=10, qvalue=0.01, type=&quot;hyper&quot;) %&gt;%
+    as(&quot;GRanges&quot;)
+  annotateWithGeneParts(diffM10.hyper,  gene.obj) %&gt;%
+     plotTargetAnnotation(precedence=TRUE,
+                       main=&quot;Hyper-methylated gene parts; &gt; 10% diff.&quot;)
+  
+  annotateWithFeatureFlank(diffM10.hyper,
+                                    cpg.obj$CpGi,cpg.obj$shores,
+                                    feature.name=&quot;CpGi&quot;,flank.name=&quot;shores&quot;) %&gt;%
+    plotTargetAnnotation(col=c(&quot;green&quot;,&quot;gray&quot;,&quot;white&quot;),
+                       main=&quot;Hyper-methylated flank annotation; &gt; 10% diff.&quot;)
+
+
+  # hypomethylated sites with difference &gt; 10%
+  diffM10.hypo &lt;- getMethylDiff(diffM, difference=10, qvalue=0.01, type=&quot;hypo&quot;) %&gt;%
+    as(&quot;GRanges&quot;)
+  annotateWithGeneParts(diffM10.hypo,  gene.obj) %&gt;%
+     plotTargetAnnotation(precedence=TRUE,
+                       main=&quot;Hypo-methylated gene parts; &gt; 10% diff.&quot;)
+  
+  annotateWithFeatureFlank(diffM10.hypo,
+                                    cpg.obj$CpGi,cpg.obj$shores,
+                                    feature.name=&quot;CpGi&quot;,flank.name=&quot;shores&quot;) %&gt;%
+    plotTargetAnnotation(col=c(&quot;green&quot;,&quot;gray&quot;,&quot;white&quot;),
+                       main=&quot;Hypo-methylated flank annotation; &gt; 10% diff.&quot;)
+  
+  cat(&#39;\n\n&#39;)
+}</code></pre>
+<div id="cc_f_18-1" class="section level4">
+<h4>CC_F_18</h4>
+<p>Comparing CC_F_18 to CC_F_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-1.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-2.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-3.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-4.png" width="50%" /></p>
+</div>
+<div id="cc_m_18-1" class="section level4">
+<h4>CC_M_18</h4>
+<p>Comparing CC_M_18 to CC_M_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-5.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-6.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-7.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-8.png" width="50%" /></p>
+</div>
+<div id="ct_f_18-3" class="section level4">
+<h4>CT_F_18</h4>
+<p>Comparing CT_F_18 to CT_F_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-9.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-10.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-11.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-12.png" width="50%" /></p>
+</div>
+<div id="ct_m_18-3" class="section level4">
+<h4>CT_M_18</h4>
+<p>Comparing CT_M_18 to CT_M_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-13.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-14.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-15.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-16.png" width="50%" /></p>
+</div>
+<div id="tt_f_18-3" class="section level4">
+<h4>TT_F_18</h4>
+<p>Comparing TT_F_18 to TT_F_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-17.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-18.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-19.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-20.png" width="50%" /></p>
+</div>
+<div id="tt_m_18-3" class="section level4">
+<h4>TT_M_18</h4>
+<p>Comparing TT_M_18 to TT_M_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-21.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-22.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-23.png" width="50%" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/gene_parts_age-24.png" width="50%" /></p>
+</div>
+</div>
+</div>
+<div id="kegg-annotation" class="section level2 tabset tabset-fade tabset-pills">
+<h2>KEGG Annotation</h2>
+<div id="variant-vs-wt-2" class="section level3 tabset tabset-fade tabset-pills">
+<h3>Variant vs WT</h3>
+<pre class="r"><code>keggL_gt &lt;- list()
+
+for (gr in names(sig.snpL_gt)) {
+  
+  ## hyper-methylated genes
+  sig.gs &lt;- sig.snpL_gt[[gr]] %&gt;%
+    dplyr::filter(meth.diff &gt; 0) %&gt;% arrange(meth.diff) %&gt;%
+    pull(mgi_name)
+  # entrez id
+  sig.gs.ez &lt;- bitr(sig.gs, fromType=&quot;SYMBOL&quot;, toType=&quot;ENTREZID&quot;, OrgDb=&quot;org.Mm.eg.db&quot;)$ENTREZID
+  # kegg annotation
+  anno &lt;- enrichKEGG(gene = sig.gs.ez,
+                organism = &quot;mmu&quot;,
+                keyType = &quot;ncbi-geneid&quot;,
+                pvalueCutoff = 0.5,
+                pAdjustMethod = &quot;BH&quot;,
+                minGSSize = 10,
+                maxGSSize = 500,
+                qvalueCutoff = 0.5,
+                use_internal_data = FALSE)
+  anno &lt;- setReadable(anno, OrgDb = org.Mm.eg.db, keyType=&quot;ENTREZID&quot;)
+  keggL_gt[[gr]][[&quot;hyper&quot;]] &lt;- anno
+
+  ## hypo-methylated genes
+  sig.gs &lt;- sig.snpL_gt[[gr]] %&gt;%
+    dplyr::filter(meth.diff &lt; 0) %&gt;% arrange(meth.diff) %&gt;%
+    pull(mgi_name)
+  # entrez id
+  sig.gs.ez &lt;- bitr(sig.gs, fromType=&quot;SYMBOL&quot;, toType=&quot;ENTREZID&quot;, OrgDb=&quot;org.Mm.eg.db&quot;)$ENTREZID
+  # kegg annotation
+  anno &lt;- enrichKEGG(gene = sig.gs.ez,
+                organism = &quot;mmu&quot;,
+                keyType = &quot;ncbi-geneid&quot;,
+                pvalueCutoff = 0.5,
+                pAdjustMethod = &quot;BH&quot;,
+                minGSSize = 10,
+                maxGSSize = 500,
+                qvalueCutoff = 0.5,
+                use_internal_data = FALSE)
+  anno &lt;- setReadable(anno, OrgDb = org.Mm.eg.db, keyType=&quot;ENTREZID&quot;)
+  keggL_gt[[gr]][[&quot;hypo&quot;]] &lt;- anno
+}
+
+rm(sig.gs, sig.gs.ez, anno)</code></pre>
+<pre class="r"><code>for(gr in names(keggL_gt)){
+  cat(&quot;#### &quot;, gr ,&quot;\n&quot;)
+  cat(paste0(&quot;Comparing &quot;, gr, &quot; to &quot;, str_replace(gr, &quot;CT|TT&quot;, &quot;CC&quot;)), &quot;\n&quot;, &quot;\n&quot;)
+
+  anno &lt;- keggL_gt[[gr]][[&quot;hyper&quot;]]
+  print(barplot(anno, showCategory=20, title=paste0(&quot;KEGG pathways for hyper-methylated sites&quot;)))
+  anno &lt;- as.data.frame(anno@result) %&gt;%
+    mutate(meth_dir=&quot;hyper&quot;)
+  write_csv(anno, file=paste0(&quot;output/RRBS/3_Differential_Methylation/kegg_gt_&quot;,gr,&quot;.csv&quot;))
+
+  anno &lt;- keggL_gt[[gr]][[&quot;hypo&quot;]]
+  print(barplot(anno, showCategory=20, title=paste0(&quot;KEGG pathways for hypo-methylated sites&quot;)))
+  anno &lt;- as.data.frame(anno@result) %&gt;%
+    mutate(meth_dir=&quot;hypo&quot;)
+  write_csv(anno, file=paste0(&quot;output/RRBS/3_Differential_Methylation/kegg_gt_&quot;,gr,&quot;.csv&quot;), append = TRUE)
+  
+  cat(&#39;\n\n&#39;)
+
+}</code></pre>
+<div id="ct_f_18-4" class="section level4">
+<h4>CT_F_18</h4>
+<p>Comparing CT_F_18 to CC_F_18</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-1.png" width="960" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-2.png" width="960" /></p>
+</div>
+<div id="ct_m_18-4" class="section level4">
+<h4>CT_M_18</h4>
+<p>Comparing CT_M_18 to CC_M_18</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-3.png" width="960" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-4.png" width="960" /></p>
+</div>
+<div id="ct_f_6-2" class="section level4">
+<h4>CT_F_6</h4>
+<p>Comparing CT_F_6 to CC_F_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-5.png" width="960" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-6.png" width="960" /></p>
+</div>
+<div id="ct_m_6-2" class="section level4">
+<h4>CT_M_6</h4>
+<p>Comparing CT_M_6 to CC_M_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-7.png" width="960" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-8.png" width="960" /></p>
+</div>
+<div id="tt_f_18-4" class="section level4">
+<h4>TT_F_18</h4>
+<p>Comparing TT_F_18 to CC_F_18</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-9.png" width="960" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-10.png" width="960" /></p>
+</div>
+<div id="tt_m_18-4" class="section level4">
+<h4>TT_M_18</h4>
+<p>Comparing TT_M_18 to CC_M_18</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-11.png" width="960" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-12.png" width="960" /></p>
+</div>
+<div id="tt_f_6-2" class="section level4">
+<h4>TT_F_6</h4>
+<p>Comparing TT_F_6 to CC_F_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-13.png" width="960" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-14.png" width="960" /></p>
+</div>
+<div id="tt_m_6-2" class="section level4">
+<h4>TT_M_6</h4>
+<p>Comparing TT_M_6 to CC_M_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-15.png" width="960" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_gt-16.png" width="960" /></p>
+<pre class="r"><code>rm(anno)</code></pre>
+</div>
+</div>
+<div id="old-vs-young-2" class="section level3 tabset tabset-fade tabset-pills">
+<h3>Old vs Young</h3>
+<pre class="r"><code>keggL_age &lt;- list()
+
+for (gr in names(sig.snpL_age)) {
+  
+  ## hyper-methylated genes
+  sig.gs &lt;- sig.snpL_age[[gr]] %&gt;%
+    dplyr::filter(meth.diff &gt; 0) %&gt;% arrange(meth.diff) %&gt;%
+    pull(mgi_name)
+  # entrez id
+  sig.gs.ez &lt;- bitr(sig.gs, fromType=&quot;SYMBOL&quot;, toType=&quot;ENTREZID&quot;, OrgDb=&quot;org.Mm.eg.db&quot;)$ENTREZID
+  # kegg annotation
+  anno &lt;- enrichKEGG(gene = sig.gs.ez,
+                organism = &quot;mmu&quot;,
+                keyType = &quot;ncbi-geneid&quot;,
+                pvalueCutoff = 0.5,
+                pAdjustMethod = &quot;BH&quot;,
+                minGSSize = 10,
+                maxGSSize = 500,
+                qvalueCutoff = 0.5,
+                use_internal_data = FALSE)
+  anno &lt;- setReadable(anno, OrgDb = org.Mm.eg.db, keyType=&quot;ENTREZID&quot;)
+  keggL_age[[gr]][[&quot;hyper&quot;]] &lt;- anno
+
+  ## hypo-methylated genes
+  sig.gs &lt;- sig.snpL_age[[gr]] %&gt;%
+    dplyr::filter(meth.diff &lt; 0) %&gt;% arrange(meth.diff) %&gt;%
+    pull(mgi_name)
+  # entrez id
+  sig.gs.ez &lt;- bitr(sig.gs, fromType=&quot;SYMBOL&quot;, toType=&quot;ENTREZID&quot;, OrgDb=&quot;org.Mm.eg.db&quot;)$ENTREZID
+  # kegg annotation
+  anno &lt;- enrichKEGG(gene = sig.gs.ez,
+                organism = &quot;mmu&quot;,
+                keyType = &quot;ncbi-geneid&quot;,
+                pvalueCutoff = 0.5,
+                pAdjustMethod = &quot;BH&quot;,
+                minGSSize = 10,
+                maxGSSize = 500,
+                qvalueCutoff = 0.5,
+                use_internal_data = FALSE)
+  anno &lt;- setReadable(anno, OrgDb = org.Mm.eg.db, keyType=&quot;ENTREZID&quot;)
+  keggL_age[[gr]][[&quot;hypo&quot;]] &lt;- anno
+}
+
+rm(sig.gs, sig.gs.ez, anno)</code></pre>
+<pre class="r"><code>for(gr in names(keggL_age)){
+  cat(&quot;#### &quot;, gr ,&quot;\n&quot;)
+  cat(paste0(&quot;Comparing &quot;, gr, &quot; to &quot;, str_replace(gr, &quot;18&quot;, &quot;6&quot;)), &quot;\n&quot;, &quot;\n&quot;)
+
+  anno &lt;- keggL_age[[gr]][[&quot;hyper&quot;]]
+  print(barplot(anno, showCategory=20, title=paste0(&quot;KEGG pathways for hyper-methylated sites&quot;)))
+  anno &lt;- as.data.frame(anno@result) %&gt;%
+    mutate(meth_dir=&quot;hyper&quot;)
+  write_csv(anno, file=paste0(&quot;output/RRBS/3_Differential_Methylation/kegg_age_&quot;,gr,&quot;.csv&quot;))
+
+  anno &lt;- keggL_age[[gr]][[&quot;hypo&quot;]]
+  print(barplot(anno, showCategory=20, title=paste0(&quot;KEGG pathways for hypo-methylated sites&quot;)))
+  anno &lt;- as.data.frame(anno@result) %&gt;%
+    mutate(meth_dir=&quot;hypo&quot;)
+  write_csv(anno, file=paste0(&quot;output/RRBS/3_Differential_Methylation/kegg_age_&quot;,gr,&quot;.csv&quot;), append = TRUE)
+  
+  cat(&#39;\n\n&#39;)
+
+}</code></pre>
+<div id="cc_f_18-2" class="section level4">
+<h4>CC_F_18</h4>
+<p>Comparing CC_F_18 to CC_F_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_age-1.png" width="960" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_age-2.png" width="960" /></p>
+</div>
+<div id="cc_m_18-2" class="section level4">
+<h4>CC_M_18</h4>
+<p>Comparing CC_M_18 to CC_M_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_age-3.png" width="960" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_age-4.png" width="960" /></p>
+</div>
+<div id="ct_f_18-5" class="section level4">
+<h4>CT_F_18</h4>
+<p>Comparing CT_F_18 to CT_F_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_age-5.png" width="960" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_age-6.png" width="960" /></p>
+</div>
+<div id="ct_m_18-5" class="section level4">
+<h4>CT_M_18</h4>
+<p>Comparing CT_M_18 to CT_M_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_age-7.png" width="960" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_age-8.png" width="960" /></p>
+</div>
+<div id="tt_f_18-5" class="section level4">
+<h4>TT_F_18</h4>
+<p>Comparing TT_F_18 to TT_F_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_age-9.png" width="960" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_age-10.png" width="960" /></p>
+</div>
+<div id="tt_m_18-5" class="section level4">
+<h4>TT_M_18</h4>
+<p>Comparing TT_M_18 to TT_M_6</p>
+<p><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_age-11.png" width="960" /><img src="RRBS_3_Differential_Methylation_gtsxag_files/figure-html/kegg_plot_age-12.png" width="960" /></p>
+<pre class="r"><code>rm(anno)</code></pre>
+</div>
+</div>
+</div>
+<div id="cell-specificity" class="section level2 tabset tabset-fade tabset-pills">
+<h2>Cell-specificity</h2>
+<p>Cell type markers in the brain are taken from McKenzie et al. (Supplemental File 1, <a href="DOI:10.1038/s41598-018-27293-5" class="uri">DOI:10.1038/s41598-018-27293-5</a>). Cell specificity for a given gene was determined in this study as minimum log fold change when pairwise comparing the expression of the gene in the given cell type with the expression of the gene in all other cell types. Cell type for that gene was then determined as the cell type with the highest specificity. The top 1000 genes were included in the final dataset as markers for each cell type.</p>
+<p>Here I’m using cell specificity score to look for overlap between cell-specific genes and hypo/hyper methylated genes. I use chi-square to test for biased representations of any cell type genes in either the hypo- or hyper-methylated genes, and a plot of chi-square deviations from expectation for visualization.</p>
+<div id="variant-vs-wt-3" class="section level3 tabset tabset-fade tabset-pills">
+<h3>Variant vs WT</h3>
+</div>
+</div>
+<div id="output" class="section level2">
+<h2>Output</h2>
+<p>Saving lists of significantly hyper/hypo methylated genes to project folder</p>
+<pre class="r"><code># variant vs wt
+write_csv(as.tibble(t(c(colnames(sig.snpL_gt[[1]]), &quot;comparison&quot;))), 
+            file=&quot;output/RRBS/3_Differential_Methylation/sig_dmg_gt.csv&quot;,
+          col_names = F)
+
+for (gr in names(sig.snpL_gt)) {
+  sig.snpL_gt[[gr]] %&gt;%
+    dplyr::mutate(comparison=gr) %&gt;%
+    write_csv(file=&quot;output/RRBS/3_Differential_Methylation/sig_dmg_gt.csv&quot;, append=TRUE)
+  }
+
+# age 18 vs 6
+write_csv(as.tibble(t(c(colnames(sig.snpL_age[[1]]), &quot;comparison&quot;))), 
+            file=&quot;output/RRBS/3_Differential_Methylation/sig_dmg_age.csv&quot;,
+          col_names = F)
+
+for (gr in names(sig.snpL_age)) {
+  sig.snpL_age[[gr]] %&gt;%
+    dplyr::mutate(comparison=gr) %&gt;%
+    write_csv(file=&quot;output/RRBS/3_Differential_Methylation/sig_dmg_age.csv&quot;, append=TRUE)
+  }</code></pre>
+<p>Uploading lists of significant genes to [synapse]((<a href="https://www.synapse.org/#!Synapse:syn25174486" class="uri">https://www.synapse.org/#!Synapse:syn25174486</a>)</p>
+<pre class="r"><code>synLogin() 
+## variant vs wt
+file &lt;- File(&quot;output/RRBS/3_Differential_Methylation/sig_dmg_gt.csv&quot;,
+             contentType = &quot;text/plain&quot;,
+             description = &quot;lists of significantly hyper/hypo methylated genes; variant vs wt&quot;,
+             parent = &quot;syn25174486&quot;)
+
+provenance &lt;- Activity(used = c(&quot;syn25834048&quot;, &quot;syn25834047&quot;),
+                       executed = &quot;https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RRBS_3_Differential_Methylation_gtsxag.Rmd&quot;)
+
+file &lt;- synStore(file, activity=provenance)
+
+# 18 vs 6 months
+file &lt;- File(&quot;output/RRBS/3_Differential_Methylation/sig_dmg_age.csv&quot;,
+             contentType = &quot;text/plain&quot;,
+             description = &quot;lists of significantly hyper/hypo methylated genes; 18 vs 6 months&quot;,
+             parent = &quot;syn25174486&quot;)
+
+provenance &lt;- Activity(used = c(&quot;syn25834048&quot;, &quot;syn25834047&quot;),
+                       executed = &quot;https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RRBS_3_Differential_Methylation_gtsxag.Rmd&quot;)
+
+file &lt;- synStore(file, activity=provenance)</code></pre>
+</div>
+
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiUlJCUyBEaWZmZXJlbnRpYWwgTWV0aHlsYXRpb24iCnN1YnRpdGxlOiAiU2VwYXJhdGVkIGJ5IGdlbm90eXBlLCBhZ2UsIGFuZCBzZXgiCmF1dGhvcjogIkFubmF0IEhhYmVyIgpkYXRlOiAnYHIgU3lzLkRhdGUoKWAnCm91dHB1dDogCiAgaHRtbF9kb2N1bWVudDoKICAgIHRvYzogdHJ1ZQogICAgdG9jX2RlcHRoOiAzCiAgICBjb2RlX2ZvbGRpbmc6IGhpZGUKLS0tCgpgYGB7ciBzZXR1cCwgd2FybmluZz1GQUxTRSwgbWVzc2FnZT1GQUxTRX0Ka25pdHI6Om9wdHNfa25pdCRzZXQocm9vdC5kaXIgPSBycHJvanJvb3Q6OmZpbmRfcnN0dWRpb19yb290X2ZpbGUoKSkKa25pdHI6Om9wdHNfY2h1bmskc2V0KGNhY2hlID0gVFJVRSwgCiAgICAgICAgICAgICAgICAgICAgICAjY2FjaGUucGF0aCA9ICJvdXRwdXQvUlJCUy8zX0RpZmZlcmVudGlhbF9NZXRoeWxhdGlvbiIsCiAgICAgICAgICAgICAgICAgICAgICBtZXNzYWdlPUZBTFNFLCB3YXJuaW5nPUZBTFNFKQpgYGAKCmBgYHtyIGxpYnJhcmllc30Kcm0obGlzdD1scygpKQoKc3VwcHJlc3NQYWNrYWdlU3RhcnR1cE1lc3NhZ2VzKHsKICBsaWJyYXJ5KG1ldGh5bEtpdCkKICBsaWJyYXJ5KHN5bmFwc2VyKQogIGxpYnJhcnkodGlkeXZlcnNlKQogIGxpYnJhcnkoR2Vub21pY1JhbmdlcykKICBsaWJyYXJ5KGdlbm9tYXRpb24pCiAgbGlicmFyeShDaElQcGVha0Fubm8pCiAgbGlicmFyeShjbHVzdGVyUHJvZmlsZXIpCiAgbGlicmFyeShHT3N1bW1hcmllcykKICBsaWJyYXJ5KG9yZy5NbS5lZy5kYikKICBsaWJyYXJ5KGJpb21hUnQpCiAgbGlicmFyeSh2Y2QpCn0pCgpgYGAKCiMjIElucHV0ClJlYWQgc2FtcGxlIG1ldGFkYXRhIGFuZCBtZXRoeWxhdGlvbiBjYWxscy4gIApHZW5vdHlwZXMgd2VyZSBhbHJlYWR5IHN3aXRjaGVkIGZvciB0d28gc2FtcGxlcyAoMzQxNTggZnJvbSBUVCB0byBDVDsgMzQxNjMgZnJvbSBDVCB0byBUVCkKYGBge3IgaW5wdXRfcHJvamVjdH0KdW5pdGVkX21ldGggPC0gcmVhZFJEUyhmaWxlPSJvdXRwdXQvUlJCUy8xX1Byb2Nlc3NpbmdfUUMvdW5pdGVkX21ldGguUkRTIikKbWV0YSA8LSByZWFkX2NzdihmaWxlPSJvdXRwdXQvUlJCUy8yX0V4cGxvcmF0b3J5X0FuYWx5c2lzL1JSQlNfZ2xvYmFsbWV0aF9obWMuY3N2IiwKICAgICAgICAgICAgICAgICBjb2xfdHlwZXMgPSBjb2xzKC5kZWZhdWx0ID0gImMiKSkKYGBgCgpgYGB7ciBpbnB1dF9zeW5hcHNlLCBldmFsPUZBTFNFfQpzeW5Mb2dpbigpIAoKdW5pdGVkX21ldGggPC0gcmVhZFJEUyhzeW5HZXQoInN5bjI1ODM0MDQ3IikkcGF0aCkKbWV0YSA8LSByZWFkX2NzdihzeW5HZXQoInN5bjI1ODM0MDQ4IikkcGF0aCwKICAgICAgICAgICAgICAgICBjb2xfdHlwZXMgPSBjb2xzKC5kZWZhdWx0ID0gImMiKSkKYGBgCgojIyBkaWZmZXJlbnRpYWxseSBNZXRoeWxhdGVkIENwRyBzaXRlcyAgey50YWJzZXQgLnRhYnNldC1mYWRlIC50YWJzZXQtcGlsbHN9CkZpbmRpbmcgZGlmZmVyZW50aWFsbHkgbWV0aHlsYXRlZCBDcEcgc2l0ZXMgc2VwYXJhdGVseSBmb3IgYWdlIGdyb3VwcyBhbmQgc2V4LiAgCk1hcHBpbmcgdG8ga25vd24gZ2VuZXMgYnkgZmluZGluZyBvdmVybGFwIGJldHdlZW4gdGhlIHNucCdzIGFuZCBtbTEwIHJlZmVyZW5jZS4gIApUaGUgcmVmZXJlbmNlIGFubm90YXRpb24gd2FzIGRvd25sb2FkZWQgZGlyZWN0bHkgZnJvbSBodHRwOi8vZ2Vub21lLnVjc2MuZWR1L2NnaS1iaW4vaGdUYWJsZXMgCmBgYHtyIHJlZnNlcV9ncn0KIyByZWFkIHJlZmVyZW5jZSBhbmQgY29udmVydCB0byBHUmFuZ2VzCnJlZnNlcSA8LSByZWFkX3RzdigiZGF0YS9tbTEwLnJlZnNlcS5nZW5lcy50eHQiKSAKCnJlZi5nciA8LSBHUmFuZ2VzKAogICAgICAgIHNlcW5hbWVzID0gc3Vic3RyKHJlZnNlcSRjaHJvbSwgNCw1KSwKICAgICAgICByYW5nZXM9SVJhbmdlcyhzdGFydCA9IHJlZnNlcSR0eFN0YXJ0LCBlbmQgPSByZWZzZXEkdHhFbmQpLAogICAgICAgIG1naV9uYW1lPXJlZnNlcSRuYW1lMgogICAgICAgICkKbmFtZXMocmVmLmdyKSA8LSByZWZzZXEkbmFtZQpybShyZWZzZXEpCmBgYAoKIyMjIFZhcmlhbnQgdnMgV1Qgey50YWJzZXQgLnRhYnNldC1mYWRlIC50YWJzZXQtcGlsbHN9CkZvciBlYWNoIGNvbWJpbmF0aW9uIG9mIHNleCAoTSxGKSBhbmQgYWdlICg2LDE4KSB3ZSBjb21wYXJlIENUIHRvIENDIGFuZCBUVCB0byBDQy4KVG9wIGdlbmVzIGFyZSBpZGVudGlmaWVkIGFzIHNpZ25pZmljYW50IGF0IHF2YWx1ZSA8IDAuMDEgYW5kIG1ldGh5bGF0aW9uIGRpZmZlcmVuY2UgPjEwCmBgYHtyIGRpZmZNX29ial9ndH0KZ3JwIDwtIG1ldGEgJT4lCiAgZmlsdGVyKGdlbm90eXBlIT0iQ0MiKSAlPiUKICBkaXN0aW5jdChnZW5vdHlwZSwgc2V4LCBhZ2UpCgpkaWZmTUxfZ3QgPC0gc2lnLnNucExfZ3QgPC0gbGlzdCgpCgpmb3IgKGkgaW4gMTpucm93KGdycCkpIHsKICAjcHJpbnQoaSkKICAjIGdldCBnZW5vdHlwZSwgc2V4LCBhbmQgYWdlIGZvciB0aGlzIGNvbXBhcmlzb24KICBndCA8LSBncnAkZ2Vub3R5cGVbaV0KICBzeCA8LSBncnAkc2V4W2ldCiAgYWcgPC0gZ3JwJGFnZVtpXQogIGdyIDwtIHBhc3RlKGd0LCBzeCwgYWcsIHNlcD0iXyIpCiAgCiAgIyBnZXQgc2FtcGxlX2lkIGFuZCBncm91cGluZyBmYWN0b3IgKGdlbm90eXBlKSBmb3IgdGhpcyBjb21wYXJpc29uCiAgY292IDwtIG1ldGEgJT4lCiAgICBmaWx0ZXIoZ2Vub3R5cGUgJWluJSBjKCJDQyIsZ3QpICYgc2V4ID09IHN4ICYgYWdlID09IGFnKSAlPiUKICAgIG11dGF0ZShnZW5vdHlwZSA9IGlmZWxzZShnZW5vdHlwZT09Z3QsIDEsIDApKSAlPiUKICAgIGRwbHlyOjpzZWxlY3Qoc2FtcGxlX2lkLCBnZW5vdHlwZSwgc2V4LCBhZ2UpCiAgCiAgIyBEaWZmTWV0aCBvYmplY3QgYW5kIGFuYWx5c2lzCiAgZGlmZk0gPC0gcmVvcmdhbml6ZSh1bml0ZWRfbWV0aCwgCiAgICAgICAgICAgICAgICAgICAgICAgc2FtcGxlLmlkcyA9IGNvdiRzYW1wbGVfaWQsIAogICAgICAgICAgICAgICAgICAgICAgIHRyZWF0bWVudD0gY292JGdlbm90eXBlKSAlPiUKICAgICAgICAgICAgY2FsY3VsYXRlRGlmZk1ldGgoKQogIAogICMgZXh0cmFjdCBzaWduaWZpY2FudCBzaXRlcyBhbmQgY29udmVydCB0byBHUmFuZ2VzCiAgc25wLmdyIDwtIGdldE1ldGh5bERpZmYoZGlmZk0sIGRpZmZlcmVuY2UgPSAxMCwgcXZhbHVlPTAuMDEsIHR5cGU9ImFsbCIpICU+JQogICAgYXMoIkdSYW5nZXMiKQogIG5hbWVzKHNucC5ncikgPC0gcGFzdGUoc25wLmdyQHNlcW5hbWVzQHZhbHVlcywgc25wLmdyQHJhbmdlc0BzdGFydCwgc2VwPSI6IikKCiAgIyBGaW5kIG92ZXJsYXAgd2l0aCByZWZlcmVuY2UKICBvdmVybGFwIDwtIGZpbmRPdmVybGFwcyhzbnAuZ3IsIHJlZi5ncikKICBoaXRzIDwtIHJlZi5nciRtZ2lfbmFtZVtzbG90KG92ZXJsYXAsICJ0byIpXQogIG5hbWVzKGhpdHMpIDwtIG5hbWVzKHNucC5ncilbc2xvdChvdmVybGFwLCAiZnJvbSIpXQogIGhpdHMgPC0gaGl0c1shZHVwbGljYXRlZChoaXRzKV0KICBzbnBETWdlbmVzIDwtIHNucC5ncltuYW1lcyhoaXRzKSxdCiAgbWNvbHMoc25wRE1nZW5lcykkbWdpX25hbWUgPC0gaGl0cwogIAogIHNucERNZ2VuZXMgPC0gZGF0YS5mcmFtZShzbnBETWdlbmVzKSAlPiUKICAgIGRwbHlyOjpzZWxlY3QoY2hyb21vc29tZT1zZXFuYW1lcywgZXZlcnl0aGluZygpKSAlPiUKICAgIGFycmFuZ2UoY2hyb21vc29tZSwgbWV0aC5kaWZmKQogIAogIGRpZmZNTF9ndFtbZ3JdXSA8LSBkaWZmTQogIHNpZy5zbnBMX2d0W1tncl1dIDwtIHNucERNZ2VuZXMKICAKICBybShndCwgc3gsIGFnLCBjb3YsIGRpZmZNLCBzbnAuZ3IsIG92ZXJsYXAsIGhpdHMsIHNucERNZ2VuZXMpCn0KYGBgCgpgYGB7ciwgZGlmZk1fcGxvdF9ndCwgbWVzc2FnZT1GQUxTRSwgd2FybmluZz1GQUxTRSwgZmlnLmhlaWdodCA9IDYsIHJlc3VsdHM9J2FzaXMnfQpmb3IoZ3IgaW4gbmFtZXMoZGlmZk1MX2d0KSl7CiAgY2F0KCIjIyMjICIsIGdyICwiXG4iKQogIGRpZmZNIDwtIGRpZmZNTF9ndFtbZ3JdXQogIGNhdChwYXN0ZTAoIkNvbXBhcmluZyAiLCBnciwgIiB0byAiLCBzdHJfcmVwbGFjZShnciwgIkNUfFRUIiwgIkNDIikpLCAiXG4iKQogIGRpZmZNZXRoUGVyQ2hyKGRpZmZNLCBwbG90PVRSVUUsIHF2YWx1ZS5jdXRvZmY9MC4wMSwgbWV0aC5jdXRvZmY9MTApCiAgZGlmZk1ldGhQZXJDaHIoZGlmZk0sIHBsb3Q9VFJVRSwgcXZhbHVlLmN1dG9mZj0wLjAxLCBtZXRoLmN1dG9mZj0wKQogIGNhdCgnXG5cbicpCn0KCnJtKGRpZmZNKQpgYGAKCiMjIyBPbGQgdnMgWW91bmcgey50YWJzZXQgLnRhYnNldC1mYWRlIC50YWJzZXQtcGlsbHN9CkZvciBlYWNoIGNvbWJpbmF0aW9uIG9mIHNleCAoTSxGKSBhbmQgZ2Vub3R5cGUgKENDLCBDVCwgVFQpIHdlIGNvbXBhcmUgb2xkIHRvIHlvdW5nIHNhbXBsZXMgKDE4IHZzIDYgbW9udGhzKS4gIApUb3AgZ2VuZXMgYXJlIGlkZW50aWZpZWQgYXMgc2lnbmlmaWNhbnQgYXQgcXZhbHVlIDwgMC4wMSBhbmQgbWV0aHlsYXRpb24gZGlmZmVyZW5jZSA+MTAKYGBge3IgZGlmZk1fb2JqX2FnZX0KZ3JwIDwtIG1ldGEgJT4lCiAgZmlsdGVyKGFnZT09IjE4IikgJT4lCiAgZGlzdGluY3QoZ2Vub3R5cGUsIHNleCwgYWdlKQoKZGlmZk1MX2FnZSA8LSBzaWcuc25wTF9hZ2UgPC0gbGlzdCgpCgpmb3IgKGkgaW4gMTpucm93KGdycCkpIHsKICAjcHJpbnQoaSkKICAjIGdldCBnZW5vdHlwZSwgc2V4LCBhbmQgYWdlIGZvciB0aGlzIGNvbXBhcmlzb24KICBndCA8LSBncnAkZ2Vub3R5cGVbaV0KICBzeCA8LSBncnAkc2V4W2ldCiAgYWcgPC0gZ3JwJGFnZVtpXQogIGdyIDwtIHBhc3RlKGd0LCBzeCwgYWcsIHNlcD0iXyIpCiAgCiAgIyBnZXQgc2FtcGxlX2lkIGFuZCBncm91cGluZyBmYWN0b3IgKGdlbm90eXBlKSBmb3IgdGhpcyBjb21wYXJpc29uCiAgY292IDwtIG1ldGEgJT4lCiAgICBmaWx0ZXIoc2V4ID09IHN4ICYgZ2Vub3R5cGUgPT0gZ3QpICU+JQogICAgbXV0YXRlKGFnZSA9IGlmZWxzZShhZ2U9PSIxOCIsIDEsIDApKSAlPiUKICAgIGRwbHlyOjpzZWxlY3Qoc2FtcGxlX2lkLCBnZW5vdHlwZSwgc2V4LCBhZ2UpCiAgCiAgIyBEaWZmTWV0aCBvYmplY3QgYW5kIGFuYWx5c2lzCiAgZGlmZk0gPC0gcmVvcmdhbml6ZSh1bml0ZWRfbWV0aCwgCiAgICAgICAgICAgICAgICAgICAgICAgc2FtcGxlLmlkcyA9IGNvdiRzYW1wbGVfaWQsIAogICAgICAgICAgICAgICAgICAgICAgIHRyZWF0bWVudD0gY292JGFnZSkgJT4lCiAgICAgICAgICAgIGNhbGN1bGF0ZURpZmZNZXRoKCkKICAKICAjIGV4dHJhY3Qgc2lnbmlmaWNhbnQgc2l0ZXMgYW5kIGNvbnZlcnQgdG8gR1JhbmdlcwogIHNucC5nciA8LSBnZXRNZXRoeWxEaWZmKGRpZmZNLCBkaWZmZXJlbmNlID0gMTAsIHF2YWx1ZT0wLjAxLCB0eXBlPSJhbGwiKSAlPiUKICAgIGFzKCJHUmFuZ2VzIikKICBuYW1lcyhzbnAuZ3IpIDwtIHBhc3RlKHNucC5nckBzZXFuYW1lc0B2YWx1ZXMsIHNucC5nckByYW5nZXNAc3RhcnQsIHNlcD0iOiIpCgogICMgRmluZCBvdmVybGFwIHdpdGggcmVmZXJlbmNlCiAgb3ZlcmxhcCA8LSBmaW5kT3ZlcmxhcHMoc25wLmdyLCByZWYuZ3IpCiAgaGl0cyA8LSByZWYuZ3IkbWdpX25hbWVbc2xvdChvdmVybGFwLCAidG8iKV0KICBuYW1lcyhoaXRzKSA8LSBuYW1lcyhzbnAuZ3IpW3Nsb3Qob3ZlcmxhcCwgImZyb20iKV0KICBoaXRzIDwtIGhpdHNbIWR1cGxpY2F0ZWQoaGl0cyldCiAgc25wRE1nZW5lcyA8LSBzbnAuZ3JbbmFtZXMoaGl0cyksXQogIG1jb2xzKHNucERNZ2VuZXMpJG1naV9uYW1lIDwtIGhpdHMKICAKICBzbnBETWdlbmVzIDwtIGRhdGEuZnJhbWUoc25wRE1nZW5lcykgJT4lCiAgICBkcGx5cjo6c2VsZWN0KGNocm9tb3NvbWU9c2VxbmFtZXMsIGV2ZXJ5dGhpbmcoKSkgJT4lCiAgICBhcnJhbmdlKGNocm9tb3NvbWUsIG1ldGguZGlmZikKICAKICBkaWZmTUxfYWdlW1tncl1dIDwtIGRpZmZNCiAgc2lnLnNucExfYWdlW1tncl1dIDwtIHNucERNZ2VuZXMKICAKICBybShndCwgc3gsIGFnLCBjb3YsIGRpZmZNLCBzbnAuZ3IsIG92ZXJsYXAsIGhpdHMsIHNucERNZ2VuZXMpCn0KYGBgCgpgYGB7ciwgZGlmZk1fcGxvdF9hZ2UsIG1lc3NhZ2U9RkFMU0UsIHdhcm5pbmc9RkFMU0UsIGZpZy5oZWlnaHQgPSA2LCByZXN1bHRzPSdhc2lzJ30KZm9yKGdyIGluIG5hbWVzKGRpZmZNTF9hZ2UpKXsKICBjYXQoIiMjIyMgIiwgZ3IgLCJcbiIpCiAgZGlmZk0gPC0gZGlmZk1MX2FnZVtbZ3JdXQogIGNhdChwYXN0ZTAoIkNvbXBhcmluZyAiLCBnciwgIiB0byAiLCBzdHJfcmVwbGFjZShnciwgIjE4IiwgIjYiKSksICJcbiIpCiAgZGlmZk1ldGhQZXJDaHIoZGlmZk0sIHBsb3Q9VFJVRSwgcXZhbHVlLmN1dG9mZj0wLjAxLCBtZXRoLmN1dG9mZj0xMCkKICBkaWZmTWV0aFBlckNocihkaWZmTSwgcGxvdD1UUlVFLCBxdmFsdWUuY3V0b2ZmPTAuMDEsIG1ldGguY3V0b2ZmPTApCiAgY2F0KCdcblxuJykKfQoKcm0oZGlmZk0pCmBgYAoKIyMgR2VuZSBwYXJ0cyBhbm5vdGF0aW9uIHsudGFic2V0IC50YWJzZXQtZmFkZSAudGFic2V0LXBpbGxzfQpHZW5lIHBhcnRzIGRpc3RyaWJ1dGlvbiBmb3IgZGlmZmVyZW50aWFsbHktbWV0aHlsYXRlZCBzaXRlcywgZGVmaW5lcyB3aXRoIHF2YWx1ZSA8IDAuMDEgYW5kIG1ldGh5bGF0aW9uIGRpZmZlcmVuY2UgPjEwCmBgYHtyIHJlZl9hbm5vfQpnZW5lLm9iaj1yZWFkVHJhbnNjcmlwdEZlYXR1cmVzKCJkYXRhL21tMTAucmVmc2VxLmdlbmVzLmJlZCIpCmNwZy5vYmo9cmVhZEZlYXR1cmVGbGFuaygiZGF0YS9tbTEwLnJlZnNlcS5nZW5lcy5iZWQiLAogICAgICAgICAgICAgICAgICAgICAgICAgICBmZWF0dXJlLmZsYW5rLm5hbWU9YygiQ3BHaSIsInNob3JlcyIpKQpgYGAKCiMjIyBWYXJpYW50IHZzIFdUIHsudGFic2V0IC50YWJzZXQtZmFkZSAudGFic2V0LXBpbGxzfQpgYGB7ciwgZ2VuZV9wYXJ0c19ndCwgbWVzc2FnZT1GQUxTRSwgd2FybmluZz1GQUxTRSwgcmVzdWx0cz0nYXNpcycsIG91dC53aWR0aD1jKCc1MCUnLCAnNTAlJyl9CmZvcihnciBpbiBuYW1lcyhkaWZmTUxfZ3QpKXsKICBjYXQoIiMjIyMgIiwgZ3IgLCJcbiIpCiAgZGlmZk0gPC0gZGlmZk1MX2d0W1tncl1dCiAgY2F0KHBhc3RlMCgiQ29tcGFyaW5nICIsIGdyLCAiIHRvICIsIHN0cl9yZXBsYWNlKGdyLCAiQ1R8VFQiLCAiQ0MiKSksICJcbiIsICJcbiIpCiAgIyBoeXBlcm1ldGh5bGF0ZWQgc2l0ZXMgd2l0aCBkaWZmZXJlbmNlID4gMTAlCiAgZGlmZk0xMC5oeXBlciA8LSBnZXRNZXRoeWxEaWZmKGRpZmZNLCBkaWZmZXJlbmNlPTEwLCBxdmFsdWU9MC4wMSwgdHlwZT0iaHlwZXIiKSAlPiUKICAgIGFzKCJHUmFuZ2VzIikKICBhbm5vdGF0ZVdpdGhHZW5lUGFydHMoZGlmZk0xMC5oeXBlciwgIGdlbmUub2JqKSAlPiUKICAgICBwbG90VGFyZ2V0QW5ub3RhdGlvbihwcmVjZWRlbmNlPVRSVUUsCiAgICAgICAgICAgICAgICAgICAgICAgbWFpbj0iSHlwZXItbWV0aHlsYXRlZCBnZW5lIHBhcnRzOyA+IDEwJSBkaWZmLiIpCiAgCiAgYW5ub3RhdGVXaXRoRmVhdHVyZUZsYW5rKGRpZmZNMTAuaHlwZXIsCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGNwZy5vYmokQ3BHaSxjcGcub2JqJHNob3JlcywKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZmVhdHVyZS5uYW1lPSJDcEdpIixmbGFuay5uYW1lPSJzaG9yZXMiKSAlPiUKICAgIHBsb3RUYXJnZXRBbm5vdGF0aW9uKGNvbD1jKCJncmVlbiIsImdyYXkiLCJ3aGl0ZSIpLAogICAgICAgICAgICAgICAgICAgICAgIG1haW49Ikh5cGVyLW1ldGh5bGF0ZWQgZmxhbmsgYW5ub3RhdGlvbjsgPiAxMCUgZGlmZi4iKQoKCiAgIyBoeXBvbWV0aHlsYXRlZCBzaXRlcyB3aXRoIGRpZmZlcmVuY2UgPiAxMCUKICBkaWZmTTEwLmh5cG8gPC0gZ2V0TWV0aHlsRGlmZihkaWZmTSwgZGlmZmVyZW5jZT0xMCwgcXZhbHVlPTAuMDEsIHR5cGU9Imh5cG8iKSAlPiUKICAgIGFzKCJHUmFuZ2VzIikKICBhbm5vdGF0ZVdpdGhHZW5lUGFydHMoZGlmZk0xMC5oeXBvLCAgZ2VuZS5vYmopICU+JQogICAgIHBsb3RUYXJnZXRBbm5vdGF0aW9uKHByZWNlZGVuY2U9VFJVRSwKICAgICAgICAgICAgICAgICAgICAgICBtYWluPSJIeXBvLW1ldGh5bGF0ZWQgZ2VuZSBwYXJ0czsgPiAxMCUgZGlmZi4iKQogIAogIGFubm90YXRlV2l0aEZlYXR1cmVGbGFuayhkaWZmTTEwLmh5cG8sCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGNwZy5vYmokQ3BHaSxjcGcub2JqJHNob3JlcywKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZmVhdHVyZS5uYW1lPSJDcEdpIixmbGFuay5uYW1lPSJzaG9yZXMiKSAlPiUKICAgIHBsb3RUYXJnZXRBbm5vdGF0aW9uKGNvbD1jKCJncmVlbiIsImdyYXkiLCJ3aGl0ZSIpLAogICAgICAgICAgICAgICAgICAgICAgIG1haW49Ikh5cG8tbWV0aHlsYXRlZCBmbGFuayBhbm5vdGF0aW9uOyA+IDEwJSBkaWZmLiIpCiAgCiAgY2F0KCdcblxuJykKfQoKYGBgCgojIyMgT2xkIHZzIFlvdW5nIHsudGFic2V0IC50YWJzZXQtZmFkZSAudGFic2V0LXBpbGxzfQpgYGB7ciwgZ2VuZV9wYXJ0c19hZ2UsIG1lc3NhZ2U9RkFMU0UsIHdhcm5pbmc9RkFMU0UsIHJlc3VsdHM9J2FzaXMnLCBvdXQud2lkdGg9YygnNTAlJywgJzUwJScpfQpmb3IoZ3IgaW4gbmFtZXMoZGlmZk1MX2FnZSkpewogIGNhdCgiIyMjIyAiLCBnciAsIlxuIikKICBkaWZmTSA8LSBkaWZmTUxfYWdlW1tncl1dCiAgY2F0KHBhc3RlMCgiQ29tcGFyaW5nICIsIGdyLCAiIHRvICIsIHN0cl9yZXBsYWNlKGdyLCAiMTgiLCAiNiIpKSwgIlxuIiwgIlxuIikKICAjIGh5cGVybWV0aHlsYXRlZCBzaXRlcyB3aXRoIGRpZmZlcmVuY2UgPiAxMCUKICBkaWZmTTEwLmh5cGVyIDwtIGdldE1ldGh5bERpZmYoZGlmZk0sIGRpZmZlcmVuY2U9MTAsIHF2YWx1ZT0wLjAxLCB0eXBlPSJoeXBlciIpICU+JQogICAgYXMoIkdSYW5nZXMiKQogIGFubm90YXRlV2l0aEdlbmVQYXJ0cyhkaWZmTTEwLmh5cGVyLCAgZ2VuZS5vYmopICU+JQogICAgIHBsb3RUYXJnZXRBbm5vdGF0aW9uKHByZWNlZGVuY2U9VFJVRSwKICAgICAgICAgICAgICAgICAgICAgICBtYWluPSJIeXBlci1tZXRoeWxhdGVkIGdlbmUgcGFydHM7ID4gMTAlIGRpZmYuIikKICAKICBhbm5vdGF0ZVdpdGhGZWF0dXJlRmxhbmsoZGlmZk0xMC5oeXBlciwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3BnLm9iaiRDcEdpLGNwZy5vYmokc2hvcmVzLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBmZWF0dXJlLm5hbWU9IkNwR2kiLGZsYW5rLm5hbWU9InNob3JlcyIpICU+JQogICAgcGxvdFRhcmdldEFubm90YXRpb24oY29sPWMoImdyZWVuIiwiZ3JheSIsIndoaXRlIiksCiAgICAgICAgICAgICAgICAgICAgICAgbWFpbj0iSHlwZXItbWV0aHlsYXRlZCBmbGFuayBhbm5vdGF0aW9uOyA+IDEwJSBkaWZmLiIpCgoKICAjIGh5cG9tZXRoeWxhdGVkIHNpdGVzIHdpdGggZGlmZmVyZW5jZSA+IDEwJQogIGRpZmZNMTAuaHlwbyA8LSBnZXRNZXRoeWxEaWZmKGRpZmZNLCBkaWZmZXJlbmNlPTEwLCBxdmFsdWU9MC4wMSwgdHlwZT0iaHlwbyIpICU+JQogICAgYXMoIkdSYW5nZXMiKQogIGFubm90YXRlV2l0aEdlbmVQYXJ0cyhkaWZmTTEwLmh5cG8sICBnZW5lLm9iaikgJT4lCiAgICAgcGxvdFRhcmdldEFubm90YXRpb24ocHJlY2VkZW5jZT1UUlVFLAogICAgICAgICAgICAgICAgICAgICAgIG1haW49Ikh5cG8tbWV0aHlsYXRlZCBnZW5lIHBhcnRzOyA+IDEwJSBkaWZmLiIpCiAgCiAgYW5ub3RhdGVXaXRoRmVhdHVyZUZsYW5rKGRpZmZNMTAuaHlwbywKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3BnLm9iaiRDcEdpLGNwZy5vYmokc2hvcmVzLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBmZWF0dXJlLm5hbWU9IkNwR2kiLGZsYW5rLm5hbWU9InNob3JlcyIpICU+JQogICAgcGxvdFRhcmdldEFubm90YXRpb24oY29sPWMoImdyZWVuIiwiZ3JheSIsIndoaXRlIiksCiAgICAgICAgICAgICAgICAgICAgICAgbWFpbj0iSHlwby1tZXRoeWxhdGVkIGZsYW5rIGFubm90YXRpb247ID4gMTAlIGRpZmYuIikKICAKICBjYXQoJ1xuXG4nKQp9CgpgYGAKCiMjIEtFR0cgQW5ub3RhdGlvbiB7LnRhYnNldCAudGFic2V0LWZhZGUgLnRhYnNldC1waWxsc30KCiMjIyBWYXJpYW50IHZzIFdUIHsudGFic2V0IC50YWJzZXQtZmFkZSAudGFic2V0LXBpbGxzfQpgYGB7ciwga2VnZ19ndCwgcmVzdWx0cz0iaGlkZSJ9CmtlZ2dMX2d0IDwtIGxpc3QoKQoKZm9yIChnciBpbiBuYW1lcyhzaWcuc25wTF9ndCkpIHsKICAKICAjIyBoeXBlci1tZXRoeWxhdGVkIGdlbmVzCiAgc2lnLmdzIDwtIHNpZy5zbnBMX2d0W1tncl1dICU+JQogICAgZHBseXI6OmZpbHRlcihtZXRoLmRpZmYgPiAwKSAlPiUgYXJyYW5nZShtZXRoLmRpZmYpICU+JQogICAgcHVsbChtZ2lfbmFtZSkKICAjIGVudHJleiBpZAogIHNpZy5ncy5leiA8LSBiaXRyKHNpZy5ncywgZnJvbVR5cGU9IlNZTUJPTCIsIHRvVHlwZT0iRU5UUkVaSUQiLCBPcmdEYj0ib3JnLk1tLmVnLmRiIikkRU5UUkVaSUQKICAjIGtlZ2cgYW5ub3RhdGlvbgogIGFubm8gPC0gZW5yaWNoS0VHRyhnZW5lID0gc2lnLmdzLmV6LAogICAgICAgICAgICAgICAgb3JnYW5pc20gPSAibW11IiwKICAgICAgICAgICAgICAgIGtleVR5cGUgPSAibmNiaS1nZW5laWQiLAogICAgICAgICAgICAgICAgcHZhbHVlQ3V0b2ZmID0gMC41LAogICAgICAgICAgICAgICAgcEFkanVzdE1ldGhvZCA9ICJCSCIsCiAgICAgICAgICAgICAgICBtaW5HU1NpemUgPSAxMCwKICAgICAgICAgICAgICAgIG1heEdTU2l6ZSA9IDUwMCwKICAgICAgICAgICAgICAgIHF2YWx1ZUN1dG9mZiA9IDAuNSwKICAgICAgICAgICAgICAgIHVzZV9pbnRlcm5hbF9kYXRhID0gRkFMU0UpCiAgYW5ubyA8LSBzZXRSZWFkYWJsZShhbm5vLCBPcmdEYiA9IG9yZy5NbS5lZy5kYiwga2V5VHlwZT0iRU5UUkVaSUQiKQogIGtlZ2dMX2d0W1tncl1dW1siaHlwZXIiXV0gPC0gYW5ubwoKICAjIyBoeXBvLW1ldGh5bGF0ZWQgZ2VuZXMKICBzaWcuZ3MgPC0gc2lnLnNucExfZ3RbW2dyXV0gJT4lCiAgICBkcGx5cjo6ZmlsdGVyKG1ldGguZGlmZiA8IDApICU+JSBhcnJhbmdlKG1ldGguZGlmZikgJT4lCiAgICBwdWxsKG1naV9uYW1lKQogICMgZW50cmV6IGlkCiAgc2lnLmdzLmV6IDwtIGJpdHIoc2lnLmdzLCBmcm9tVHlwZT0iU1lNQk9MIiwgdG9UeXBlPSJFTlRSRVpJRCIsIE9yZ0RiPSJvcmcuTW0uZWcuZGIiKSRFTlRSRVpJRAogICMga2VnZyBhbm5vdGF0aW9uCiAgYW5ubyA8LSBlbnJpY2hLRUdHKGdlbmUgPSBzaWcuZ3MuZXosCiAgICAgICAgICAgICAgICBvcmdhbmlzbSA9ICJtbXUiLAogICAgICAgICAgICAgICAga2V5VHlwZSA9ICJuY2JpLWdlbmVpZCIsCiAgICAgICAgICAgICAgICBwdmFsdWVDdXRvZmYgPSAwLjUsCiAgICAgICAgICAgICAgICBwQWRqdXN0TWV0aG9kID0gIkJIIiwKICAgICAgICAgICAgICAgIG1pbkdTU2l6ZSA9IDEwLAogICAgICAgICAgICAgICAgbWF4R1NTaXplID0gNTAwLAogICAgICAgICAgICAgICAgcXZhbHVlQ3V0b2ZmID0gMC41LAogICAgICAgICAgICAgICAgdXNlX2ludGVybmFsX2RhdGEgPSBGQUxTRSkKICBhbm5vIDwtIHNldFJlYWRhYmxlKGFubm8sIE9yZ0RiID0gb3JnLk1tLmVnLmRiLCBrZXlUeXBlPSJFTlRSRVpJRCIpCiAga2VnZ0xfZ3RbW2dyXV1bWyJoeXBvIl1dIDwtIGFubm8KfQoKcm0oc2lnLmdzLCBzaWcuZ3MuZXosIGFubm8pCmBgYAoKYGBge3IsIGtlZ2dfcGxvdF9ndCwgcmVzdWx0cz0iYXNpcyIsIGZpZy53aWR0aCA9IDEwfQpmb3IoZ3IgaW4gbmFtZXMoa2VnZ0xfZ3QpKXsKICBjYXQoIiMjIyMgIiwgZ3IgLCJcbiIpCiAgY2F0KHBhc3RlMCgiQ29tcGFyaW5nICIsIGdyLCAiIHRvICIsIHN0cl9yZXBsYWNlKGdyLCAiQ1R8VFQiLCAiQ0MiKSksICJcbiIsICJcbiIpCgogIGFubm8gPC0ga2VnZ0xfZ3RbW2dyXV1bWyJoeXBlciJdXQogIHByaW50KGJhcnBsb3QoYW5ubywgc2hvd0NhdGVnb3J5PTIwLCB0aXRsZT1wYXN0ZTAoIktFR0cgcGF0aHdheXMgZm9yIGh5cGVyLW1ldGh5bGF0ZWQgc2l0ZXMiKSkpCiAgYW5ubyA8LSBhcy5kYXRhLmZyYW1lKGFubm9AcmVzdWx0KSAlPiUKICAgIG11dGF0ZShtZXRoX2Rpcj0iaHlwZXIiKQogIHdyaXRlX2Nzdihhbm5vLCBmaWxlPXBhc3RlMCgib3V0cHV0L1JSQlMvM19EaWZmZXJlbnRpYWxfTWV0aHlsYXRpb24va2VnZ19ndF8iLGdyLCIuY3N2IikpCgogIGFubm8gPC0ga2VnZ0xfZ3RbW2dyXV1bWyJoeXBvIl1dCiAgcHJpbnQoYmFycGxvdChhbm5vLCBzaG93Q2F0ZWdvcnk9MjAsIHRpdGxlPXBhc3RlMCgiS0VHRyBwYXRod2F5cyBmb3IgaHlwby1tZXRoeWxhdGVkIHNpdGVzIikpKQogIGFubm8gPC0gYXMuZGF0YS5mcmFtZShhbm5vQHJlc3VsdCkgJT4lCiAgICBtdXRhdGUobWV0aF9kaXI9Imh5cG8iKQogIHdyaXRlX2Nzdihhbm5vLCBmaWxlPXBhc3RlMCgib3V0cHV0L1JSQlMvM19EaWZmZXJlbnRpYWxfTWV0aHlsYXRpb24va2VnZ19ndF8iLGdyLCIuY3N2IiksIGFwcGVuZCA9IFRSVUUpCiAgCiAgY2F0KCdcblxuJykKCn0KCnJtKGFubm8pCmBgYAoKIyMjIE9sZCB2cyBZb3VuZyB7LnRhYnNldCAudGFic2V0LWZhZGUgLnRhYnNldC1waWxsc30KYGBge3IsIGtlZ2dfYWdlLCByZXN1bHRzPSJoaWRlIn0Ka2VnZ0xfYWdlIDwtIGxpc3QoKQoKZm9yIChnciBpbiBuYW1lcyhzaWcuc25wTF9hZ2UpKSB7CiAgCiAgIyMgaHlwZXItbWV0aHlsYXRlZCBnZW5lcwogIHNpZy5ncyA8LSBzaWcuc25wTF9hZ2VbW2dyXV0gJT4lCiAgICBkcGx5cjo6ZmlsdGVyKG1ldGguZGlmZiA+IDApICU+JSBhcnJhbmdlKG1ldGguZGlmZikgJT4lCiAgICBwdWxsKG1naV9uYW1lKQogICMgZW50cmV6IGlkCiAgc2lnLmdzLmV6IDwtIGJpdHIoc2lnLmdzLCBmcm9tVHlwZT0iU1lNQk9MIiwgdG9UeXBlPSJFTlRSRVpJRCIsIE9yZ0RiPSJvcmcuTW0uZWcuZGIiKSRFTlRSRVpJRAogICMga2VnZyBhbm5vdGF0aW9uCiAgYW5ubyA8LSBlbnJpY2hLRUdHKGdlbmUgPSBzaWcuZ3MuZXosCiAgICAgICAgICAgICAgICBvcmdhbmlzbSA9ICJtbXUiLAogICAgICAgICAgICAgICAga2V5VHlwZSA9ICJuY2JpLWdlbmVpZCIsCiAgICAgICAgICAgICAgICBwdmFsdWVDdXRvZmYgPSAwLjUsCiAgICAgICAgICAgICAgICBwQWRqdXN0TWV0aG9kID0gIkJIIiwKICAgICAgICAgICAgICAgIG1pbkdTU2l6ZSA9IDEwLAogICAgICAgICAgICAgICAgbWF4R1NTaXplID0gNTAwLAogICAgICAgICAgICAgICAgcXZhbHVlQ3V0b2ZmID0gMC41LAogICAgICAgICAgICAgICAgdXNlX2ludGVybmFsX2RhdGEgPSBGQUxTRSkKICBhbm5vIDwtIHNldFJlYWRhYmxlKGFubm8sIE9yZ0RiID0gb3JnLk1tLmVnLmRiLCBrZXlUeXBlPSJFTlRSRVpJRCIpCiAga2VnZ0xfYWdlW1tncl1dW1siaHlwZXIiXV0gPC0gYW5ubwoKICAjIyBoeXBvLW1ldGh5bGF0ZWQgZ2VuZXMKICBzaWcuZ3MgPC0gc2lnLnNucExfYWdlW1tncl1dICU+JQogICAgZHBseXI6OmZpbHRlcihtZXRoLmRpZmYgPCAwKSAlPiUgYXJyYW5nZShtZXRoLmRpZmYpICU+JQogICAgcHVsbChtZ2lfbmFtZSkKICAjIGVudHJleiBpZAogIHNpZy5ncy5leiA8LSBiaXRyKHNpZy5ncywgZnJvbVR5cGU9IlNZTUJPTCIsIHRvVHlwZT0iRU5UUkVaSUQiLCBPcmdEYj0ib3JnLk1tLmVnLmRiIikkRU5UUkVaSUQKICAjIGtlZ2cgYW5ub3RhdGlvbgogIGFubm8gPC0gZW5yaWNoS0VHRyhnZW5lID0gc2lnLmdzLmV6LAogICAgICAgICAgICAgICAgb3JnYW5pc20gPSAibW11IiwKICAgICAgICAgICAgICAgIGtleVR5cGUgPSAibmNiaS1nZW5laWQiLAogICAgICAgICAgICAgICAgcHZhbHVlQ3V0b2ZmID0gMC41LAogICAgICAgICAgICAgICAgcEFkanVzdE1ldGhvZCA9ICJCSCIsCiAgICAgICAgICAgICAgICBtaW5HU1NpemUgPSAxMCwKICAgICAgICAgICAgICAgIG1heEdTU2l6ZSA9IDUwMCwKICAgICAgICAgICAgICAgIHF2YWx1ZUN1dG9mZiA9IDAuNSwKICAgICAgICAgICAgICAgIHVzZV9pbnRlcm5hbF9kYXRhID0gRkFMU0UpCiAgYW5ubyA8LSBzZXRSZWFkYWJsZShhbm5vLCBPcmdEYiA9IG9yZy5NbS5lZy5kYiwga2V5VHlwZT0iRU5UUkVaSUQiKQogIGtlZ2dMX2FnZVtbZ3JdXVtbImh5cG8iXV0gPC0gYW5ubwp9CgpybShzaWcuZ3MsIHNpZy5ncy5leiwgYW5ubykKCmBgYAoKYGBge3IsIGtlZ2dfcGxvdF9hZ2UsIHJlc3VsdHM9ImFzaXMiLCBmaWcud2lkdGggPSAxMH0KZm9yKGdyIGluIG5hbWVzKGtlZ2dMX2FnZSkpewogIGNhdCgiIyMjIyAiLCBnciAsIlxuIikKICBjYXQocGFzdGUwKCJDb21wYXJpbmcgIiwgZ3IsICIgdG8gIiwgc3RyX3JlcGxhY2UoZ3IsICIxOCIsICI2IikpLCAiXG4iLCAiXG4iKQoKICBhbm5vIDwtIGtlZ2dMX2FnZVtbZ3JdXVtbImh5cGVyIl1dCiAgcHJpbnQoYmFycGxvdChhbm5vLCBzaG93Q2F0ZWdvcnk9MjAsIHRpdGxlPXBhc3RlMCgiS0VHRyBwYXRod2F5cyBmb3IgaHlwZXItbWV0aHlsYXRlZCBzaXRlcyIpKSkKICBhbm5vIDwtIGFzLmRhdGEuZnJhbWUoYW5ub0ByZXN1bHQpICU+JQogICAgbXV0YXRlKG1ldGhfZGlyPSJoeXBlciIpCiAgd3JpdGVfY3N2KGFubm8sIGZpbGU9cGFzdGUwKCJvdXRwdXQvUlJCUy8zX0RpZmZlcmVudGlhbF9NZXRoeWxhdGlvbi9rZWdnX2FnZV8iLGdyLCIuY3N2IikpCgogIGFubm8gPC0ga2VnZ0xfYWdlW1tncl1dW1siaHlwbyJdXQogIHByaW50KGJhcnBsb3QoYW5ubywgc2hvd0NhdGVnb3J5PTIwLCB0aXRsZT1wYXN0ZTAoIktFR0cgcGF0aHdheXMgZm9yIGh5cG8tbWV0aHlsYXRlZCBzaXRlcyIpKSkKICBhbm5vIDwtIGFzLmRhdGEuZnJhbWUoYW5ub0ByZXN1bHQpICU+JQogICAgbXV0YXRlKG1ldGhfZGlyPSJoeXBvIikKICB3cml0ZV9jc3YoYW5ubywgZmlsZT1wYXN0ZTAoIm91dHB1dC9SUkJTLzNfRGlmZmVyZW50aWFsX01ldGh5bGF0aW9uL2tlZ2dfYWdlXyIsZ3IsIi5jc3YiKSwgYXBwZW5kID0gVFJVRSkKICAKICBjYXQoJ1xuXG4nKQoKfQoKcm0oYW5ubykKYGBgCgojIyBDZWxsLXNwZWNpZmljaXR5IHsudGFic2V0IC50YWJzZXQtZmFkZSAudGFic2V0LXBpbGxzfQpDZWxsIHR5cGUgbWFya2VycyBpbiB0aGUgYnJhaW4gYXJlIHRha2VuIGZyb20gTWNLZW56aWUgZXQgYWwuIChTdXBwbGVtZW50YWwgRmlsZSAxLCBET0k6MTAuMTAzOC9zNDE1OTgtMDE4LTI3MjkzLTUpLgpDZWxsIHNwZWNpZmljaXR5IGZvciBhIGdpdmVuIGdlbmUgd2FzIGRldGVybWluZWQgaW4gdGhpcyBzdHVkeSBhcyBtaW5pbXVtIGxvZyBmb2xkIGNoYW5nZSB3aGVuIHBhaXJ3aXNlIGNvbXBhcmluZyB0aGUgZXhwcmVzc2lvbiBvZiB0aGUgZ2VuZSBpbiB0aGUgZ2l2ZW4gY2VsbCB0eXBlIHdpdGggdGhlIGV4cHJlc3Npb24gb2YgdGhlIGdlbmUgaW4gYWxsIG90aGVyIGNlbGwgdHlwZXMuIENlbGwgdHlwZSBmb3IgdGhhdCBnZW5lIHdhcyB0aGVuIGRldGVybWluZWQgYXMgdGhlIGNlbGwgdHlwZSB3aXRoIHRoZSBoaWdoZXN0IHNwZWNpZmljaXR5LiBUaGUgdG9wIDEwMDAgZ2VuZXMgd2VyZSBpbmNsdWRlZCBpbiB0aGUgZmluYWwgZGF0YXNldCBhcyBtYXJrZXJzIGZvciBlYWNoIGNlbGwgdHlwZS4KCkhlcmUgSSdtIHVzaW5nIGNlbGwgc3BlY2lmaWNpdHkgc2NvcmUgdG8gbG9vayBmb3Igb3ZlcmxhcCBiZXR3ZWVuIGNlbGwtc3BlY2lmaWMgZ2VuZXMgYW5kIGh5cG8vaHlwZXIgbWV0aHlsYXRlZCBnZW5lcy4gSSB1c2UgY2hpLXNxdWFyZSB0byB0ZXN0IGZvciBiaWFzZWQgcmVwcmVzZW50YXRpb25zIG9mIGFueSBjZWxsIHR5cGUgZ2VuZXMgaW4gZWl0aGVyIHRoZSBoeXBvLSBvciBoeXBlci1tZXRoeWxhdGVkIGdlbmVzLCBhbmQgYSBwbG90IG9mIGNoaS1zcXVhcmUgZGV2aWF0aW9ucyBmcm9tIGV4cGVjdGF0aW9uIGZvciB2aXN1YWxpemF0aW9uLiAgCgpgYGB7ciBjZWxsX3NwZWNfcmVmLCBldmFsPUZBTFNFLCBpbmNsdWRlPUZBTFNFfQpjZWxsLnR5cGVzIDwtIGMoIkFzdHJvY3R5ZXMiLCAiRW5kb3RoZWxpYWwiLCAiTWljcm9nbGlhIiwgIk5ldXJvbnMiLCAiT2xpZ29kZW5kcm9jeXRlcyIpCnNldHMgPC0gYygiaHlwbyIsImh5cGVyIikKCiMgcmVhZCBjZWxsLXNwZWNpZmljaXR5IHJlZmVyZW5jZQpodW0uc3BlY2lmaWMgPC0gcmVhZC5jc3YoImRhdGEvTWNLZW56aWVfMjAxN19CcmFpbl9DZWxsX1NwZWNpZmljX01hcmtlcnNfSHVtYW5fU3BlY2lmaWNpdHkuY3N2IiwgaGVhZGVyPVQsIHN0cmluZ3NBc0ZhY3RvcnM9RikKaHVtLnNwZWNpZmljIDwtIHNwbGl0KGh1bS5zcGVjaWZpYywgaHVtLnNwZWNpZmljJENlbGx0eXBlLCBkcm9wPVRSVUUpIApuYW1lcyhodW0uc3BlY2lmaWMpIDwtIGNlbGwudHlwZXMKCmBgYAoKIyMjIFZhcmlhbnQgdnMgV1Qgey50YWJzZXQgLnRhYnNldC1mYWRlIC50YWJzZXQtcGlsbHN9CmBgYHtyLCBjZWxsX3NwZWNfZ3QsIHJlc3VsdHM9ImFzaXMiLCBldmFsPUZBTFNFLCBpbmNsdWRlPUZBTFNFfQoKZm9yIChnciBpbiBuYW1lcyhzaWcuc25wTF9ndCkpIHsKICBjYXQoIiMjIyMgIiwgZ3IgLCJcbiIpCiAgY2F0KHBhc3RlMCgiQ29tcGFyaW5nICIsIGdyLCAiIHRvICIsIHN0cl9yZXBsYWNlKGdyLCAiQ1R8VFQiLCAiQ0MiKSksICJcbiIsICJcbiIpCiAgc2lnLmdzIDwtIHNpZy5zbnBMX2d0W1tncl1dCgojIGdldCBnZW5lIHNldHMKZ2VuZS5zZXRzIDwtIGxhcHBseShzaWcuZ3MsIGZ1bmN0aW9uKGwpe2RwbHlyOjpzZWxlY3QobCwgbWdpX25hbWUpfSkKCmdlbmUuc2V0cy5oZyA8LSBsaXN0KCkKZm9yIChzIGluIG5hbWVzKHNpZy5ncykpIHsKICAgIGdlbmUuc2V0cy5oZ1tbc11dID0gZ2V0TERTKGF0dHJpYnV0ZXMgPSBjKCJtZ2lfc3ltYm9sIiksIGZpbHRlcnMgPSAibWdpX3N5bWJvbCIsIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICB2YWx1ZXMgPSBzaWcuZ3NbW3NdXSRtZ2lfbmFtZSwgbWFydCA9IG1vdXNlLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICBhdHRyaWJ1dGVzTCA9IGMoImhnbmNfc3ltYm9sIiksIG1hcnRMID0gaHVtYW4sIHVuaXF1ZVJvd3M9VCkkSEdOQy5zeW1ib2wKCn0KCiMgTnVtYmVyIG9mIG1hcmtlciBnZW5lcyBmb3IgZWFjaCBjZWxsIHR5cGUgaW4gZWFjaCBnZW5lIHNldApzcGVjaWZpYy5zZXQgPC0gc2FwcGx5KHNldHMsIGZ1bmN0aW9uKHMpIHsKICBzYXBwbHkoY2VsbC50eXBlcywgZnVuY3Rpb24oY3QpIGxlbmd0aChpbnRlcnNlY3QoaHVtLnNwZWNpZmljW1tjdF1dJGdlbmUsIGdlbmUuc2V0cy5oZ1tbc11dKSksIFVTRS5OQU1FUz1UKQp9KQoKcHJpbnQoc3BlY2lmaWMuc2V0KQpjaGlzcS50ZXN0KHNwZWNpZmljLnNldCkKYXNzb2ModChzcGVjaWZpYy5zZXQpLCBzaGFkZT1UUlVFLGxhYmVsaW5nX2FyZ3MgPSBsaXN0KGFiYnJldmlhdGVfbGFicyA9IGMoNiwgOSkpKQoKfQpybShzaWcuZ3MsIGdlbmUuc2V0cywgZ2VuZS5zZXRzLmhnLCBzcGVjaWZpYy5zZXQpCgpgYGAKCiMjIE91dHB1dApTYXZpbmcgbGlzdHMgb2Ygc2lnbmlmaWNhbnRseSBoeXBlci9oeXBvIG1ldGh5bGF0ZWQgZ2VuZXMgdG8gcHJvamVjdCBmb2xkZXIKYGBge3Igb3V0cHV0X3NhdmV9CiMgdmFyaWFudCB2cyB3dAp3cml0ZV9jc3YoYXMudGliYmxlKHQoYyhjb2xuYW1lcyhzaWcuc25wTF9ndFtbMV1dKSwgImNvbXBhcmlzb24iKSkpLCAKICAgICAgICAgICAgZmlsZT0ib3V0cHV0L1JSQlMvM19EaWZmZXJlbnRpYWxfTWV0aHlsYXRpb24vc2lnX2RtZ19ndC5jc3YiLAogICAgICAgICAgY29sX25hbWVzID0gRikKCmZvciAoZ3IgaW4gbmFtZXMoc2lnLnNucExfZ3QpKSB7CiAgc2lnLnNucExfZ3RbW2dyXV0gJT4lCiAgICBkcGx5cjo6bXV0YXRlKGNvbXBhcmlzb249Z3IpICU+JQogICAgd3JpdGVfY3N2KGZpbGU9Im91dHB1dC9SUkJTLzNfRGlmZmVyZW50aWFsX01ldGh5bGF0aW9uL3NpZ19kbWdfZ3QuY3N2IiwgYXBwZW5kPVRSVUUpCiAgfQoKIyBhZ2UgMTggdnMgNgp3cml0ZV9jc3YoYXMudGliYmxlKHQoYyhjb2xuYW1lcyhzaWcuc25wTF9hZ2VbWzFdXSksICJjb21wYXJpc29uIikpKSwgCiAgICAgICAgICAgIGZpbGU9Im91dHB1dC9SUkJTLzNfRGlmZmVyZW50aWFsX01ldGh5bGF0aW9uL3NpZ19kbWdfYWdlLmNzdiIsCiAgICAgICAgICBjb2xfbmFtZXMgPSBGKQoKZm9yIChnciBpbiBuYW1lcyhzaWcuc25wTF9hZ2UpKSB7CiAgc2lnLnNucExfYWdlW1tncl1dICU+JQogICAgZHBseXI6Om11dGF0ZShjb21wYXJpc29uPWdyKSAlPiUKICAgIHdyaXRlX2NzdihmaWxlPSJvdXRwdXQvUlJCUy8zX0RpZmZlcmVudGlhbF9NZXRoeWxhdGlvbi9zaWdfZG1nX2FnZS5jc3YiLCBhcHBlbmQ9VFJVRSkKICB9CgpgYGAKClVwbG9hZGluZyBsaXN0cyBvZiBzaWduaWZpY2FudCBnZW5lcyB0byBbc3luYXBzZV0oKGh0dHBzOi8vd3d3LnN5bmFwc2Uub3JnLyMhU3luYXBzZTpzeW4yNTE3NDQ4NikKYGBge3Igb3V0cHV0X3N5bmFwc2UsIHJlc3VsdHM9J2hpZGUnfQpzeW5Mb2dpbigpIAojIyB2YXJpYW50IHZzIHd0CmZpbGUgPC0gRmlsZSgib3V0cHV0L1JSQlMvM19EaWZmZXJlbnRpYWxfTWV0aHlsYXRpb24vc2lnX2RtZ19ndC5jc3YiLAogICAgICAgICAgICAgY29udGVudFR5cGUgPSAidGV4dC9wbGFpbiIsCiAgICAgICAgICAgICBkZXNjcmlwdGlvbiA9ICJsaXN0cyBvZiBzaWduaWZpY2FudGx5IGh5cGVyL2h5cG8gbWV0aHlsYXRlZCBnZW5lczsgdmFyaWFudCB2cyB3dCIsCiAgICAgICAgICAgICBwYXJlbnQgPSAic3luMjUxNzQ0ODYiKQoKcHJvdmVuYW5jZSA8LSBBY3Rpdml0eSh1c2VkID0gYygic3luMjU4MzQwNDgiLCAic3luMjU4MzQwNDciKSwKICAgICAgICAgICAgICAgICAgICAgICBleGVjdXRlZCA9ICJodHRwczovL2dpdGh1Yi5jb20vVGhlSmFja3NvbkxhYm9yYXRvcnkvTVRIRlJfQzY2N1QvYmxvYi9tYXN0ZXIvUlJCU18zX0RpZmZlcmVudGlhbF9NZXRoeWxhdGlvbl9ndHN4YWcuUm1kIikKCmZpbGUgPC0gc3luU3RvcmUoZmlsZSwgYWN0aXZpdHk9cHJvdmVuYW5jZSkKCiMgMTggdnMgNiBtb250aHMKZmlsZSA8LSBGaWxlKCJvdXRwdXQvUlJCUy8zX0RpZmZlcmVudGlhbF9NZXRoeWxhdGlvbi9zaWdfZG1nX2FnZS5jc3YiLAogICAgICAgICAgICAgY29udGVudFR5cGUgPSAidGV4dC9wbGFpbiIsCiAgICAgICAgICAgICBkZXNjcmlwdGlvbiA9ICJsaXN0cyBvZiBzaWduaWZpY2FudGx5IGh5cGVyL2h5cG8gbWV0aHlsYXRlZCBnZW5lczsgMTggdnMgNiBtb250aHMiLAogICAgICAgICAgICAgcGFyZW50ID0gInN5bjI1MTc0NDg2IikKCnByb3ZlbmFuY2UgPC0gQWN0aXZpdHkodXNlZCA9IGMoInN5bjI1ODM0MDQ4IiwgInN5bjI1ODM0MDQ3IiksCiAgICAgICAgICAgICAgICAgICAgICAgZXhlY3V0ZWQgPSAiaHR0cHM6Ly9naXRodWIuY29tL1RoZUphY2tzb25MYWJvcmF0b3J5L01USEZSX0M2NjdUL2Jsb2IvbWFzdGVyL1JSQlNfM19EaWZmZXJlbnRpYWxfTWV0aHlsYXRpb25fZ3RzeGFnLlJtZCIpCgpmaWxlIDwtIHN5blN0b3JlKGZpbGUsIGFjdGl2aXR5PXByb3ZlbmFuY2UpCgpgYGAK</div>
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeSourceEmbed("RRBS_3_Differential_Methylation_gtsxag.Rmd");
+  window.initializeCodeFolding("hide" === "show");
+});
+</script>
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

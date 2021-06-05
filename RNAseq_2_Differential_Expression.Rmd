@@ -1,5 +1,6 @@
 ---
 title: "RNAseq Differential Expression"
+subtitle: "Separated by genotype, age, and sex"
 author: "Annat Haber"
 date: "5/1/2021"
 output:
@@ -23,11 +24,10 @@ suppressPackageStartupMessages({
 ```
 
 ## Input
-1. Read sample metadata and raw counts.  
-2. Switch genotypes for two samples based on [the QC](RNAseq_1_Processing_QC):  
-    34158 from TT to CT  
-    34163 from CT to TT  
-3. Sort everything by sample ID.  
+Read sample metadata and raw counts.  
+Switch genotypes for two samples based on [the QC](RNAseq_1_Processing_QC):  
+34158 from TT to CT  
+34163 from CT to TT  
 ```{r input}
 # read sample info
 meta <- readRDS("output/RNAseq/1_Processing_QC/samplesheet_meta.RDS")
@@ -51,8 +51,8 @@ colnames(counts) <- meta$sample_id
 
 ## Sample exploration
 Using variance stabilizing transformation for visualization.
-There is great separation between male and female. In females there is separation of age, but not in males. There is no separation at all between genotypes.
-```{r plotPCA}
+There is great separation by sex. In females there is separation by age, but not in males. There is some separation between CC and CT within each age group for females (seen mostly on PC3), but no separation by genotype otherwise.
+```{r plotPCAfunction}
 # Modifying plotPCA function to include PC3
 plotPCA = function(object, ntop=500, intgroup)
 {
@@ -79,7 +79,7 @@ plotPCA = function(object, ntop=500, intgroup)
 }
 ```
 
-```{r sample_exp, out.width=c('50%', '50%'), fig.show='hold', out.extra='style="background-color: #9ecff7; padding:1px; display: inline-block;"'}
+```{r sample_exp}
 coldata <- meta %>%
   dplyr::select(sample_id, genotype, sex, age) %>%
   mutate(age=as.numeric(age)) %>%
@@ -261,13 +261,41 @@ rm(de_resL)
 ```
 
 ## Output
-```{r}
+Saving DEG lists to project folder
+```{r output_save}
 write_csv(sig.genes_gt,
-            file="output/RNAseq/2_Differential_Expression/sig_genes_padj01_variantVSwt.csv")
+            file="output/RNAseq/2_Differential_Expression/sig_deg_padj01_gt.csv")
 
 write_csv(sig.genes_age, 
-            file="output/RNAseq/2_Differential_Expression/sig_genes_padj01_18vs6.csv")
+            file="output/RNAseq/2_Differential_Expression/sig_deg_padj01_age.csv")
 
-saveRDS(de_resL_gt, file="output/RNAseq/2_Differential_Expression/sig.genes_gt.RDS")
-saveRDS(de_resL_age, file="output/RNAseq/2_Differential_Expression/sig.genes_age.RDS")
+saveRDS(de_resL_gt, file="output/RNAseq/2_Differential_Expression/sig_deg_gt.RDS")
+saveRDS(de_resL_age, file="output/RNAseq/2_Differential_Expression/sig_deg_age.RDS")
+```
+
+Uploading DEG lists to [synapse](https://www.synapse.org/#!Synapse:syn25174489)
+```{r output_synapse, results='hide'}
+synLogin() 
+## variant vs wt
+file <- File("output/RNAseq/2_Differential_Expression/sig_deg_padj01_gt.csv",
+             contentType = "text/plain",
+             description = "lists of differentially expressed genes; variant vs wt",
+             parent = "syn25174489")
+
+provenance <- Activity(used = c("syn25834043", "syn25834044"),
+                       executed = "https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RNAseq_2_Differential_Expression.Rmd")
+
+file <- synStore(file, activity=provenance)
+
+# 18 vs 6 months
+file <- File("output/RNAseq/2_Differential_Expression/sig_deg_padj01_age.csv",
+             contentType = "text/plain",
+             description = "lists of differentially expressed; 18 vs 6 months",
+             parent = "syn25174489")
+
+provenance <- Activity(used =  c("syn25834043", "syn25834044"),
+                       executed = "https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RNAseq_2_Differential_Expression.Rmd")
+
+file <- synStore(file, activity=provenance)
+
 ```

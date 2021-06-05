@@ -11,7 +11,7 @@
 
 <meta name="author" content="Annat Haber" />
 
-<meta name="date" content="2021-05-19" />
+<meta name="date" content="2021-06-04" />
 
 <title>MTHFR RRBS Exploratory Analysis</title>
 
@@ -35,6 +35,7 @@
 <script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <script src="site_libs/navigation-1.1/codefolding.js"></script>
+<script src="site_libs/navigation-1.1/sourceembed.js"></script>
 <link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
 <link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
@@ -62,6 +63,11 @@ if (window.hljs) {
 
 
 
+<style type="text/css">
+#rmd-source-code {
+  display: none;
+}
+</style>
 
 
 
@@ -348,6 +354,24 @@ div.tocify {
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    RNAseq
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="RNAseq_0_Sample_Metadata.html">Sample Metadata</a>
+    </li>
+    <li>
+      <a href="RNAseq_1_Processing_QC.html">Processing and QC</a>
+    </li>
+    <li>
+      <a href="RNAseq_2_Differential_Expression.html">Differential Expression</a>
+    </li>
+  </ul>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
     RRBS
      
     <span class="caret"></span>
@@ -363,27 +387,12 @@ div.tocify {
       <a href="RRBS_2_Exploratory_Analysis.html">Exploratory Analysis</a>
     </li>
     <li>
-      <a href="RRBS_3_Differential_Methylation.html">Differential Methylation</a>
+      <a href="RRBS_3_Differential_Methylation_gt.html">Differential Methylation; pooled sex and age</a>
+    </li>
+    <li>
+      <a href="RRBS_3_Differential_Methylation_gtsxag.html">Differential Methylation; separate sex and age</a>
     </li>
     <li class="dropdown-header">Methylation by Position</li>
-  </ul>
-</li>
-<li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-    RNAseq
-     
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu" role="menu">
-    <li>
-      <a href="RNAseq_0_Sample_Metadata.html">Sample Metadata</a>
-    </li>
-    <li>
-      <a href="RNAseq_1_Processing_QC.html">Processing and QC</a>
-    </li>
-    <li>
-      <a href="RNAseq_2_Differential_Expression.html">Differential Expression</a>
-    </li>
   </ul>
 </li>
       </ul>
@@ -424,6 +433,8 @@ div.tocify {
 <ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
 <li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
 <li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+<li role="separator" class="divider"></li>
+<li><a id="rmd-download-source" href="#">Download Rmd</a></li>
 </ul>
 </div>
 
@@ -431,7 +442,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">MTHFR RRBS Exploratory Analysis</h1>
 <h4 class="author">Annat Haber</h4>
-<h4 class="date">2021-05-19</h4>
+<h4 class="date">2021-06-04</h4>
 
 </div>
 
@@ -448,14 +459,20 @@ suppressPackageStartupMessages({
 })</code></pre>
 <div id="input" class="section level2">
 <h2>Input</h2>
-<p>Input is percent methylation in each site for each sample (samples x sites matrix), including only sites within CpG context that are covered in all samples with at least 10x coverage.</p>
+<p>Input is percent methylation in each site for each sample (samples x sites matrix), including only sites within CpG context that are covered in all samples with at least 10x coverage. Switching genotypes for two samples based on <a href="RNAseq_1_Processing_QC">the QC</a>:<br />
+34158 from TT to CT<br />
+34163 from CT to TT</p>
 <pre class="r"><code>site_meth &lt;- readRDS(file = &quot;output/RRBS/1_Processing_QC/persite_meth.RDS&quot;)
 # meta
 meta &lt;- readRDS(file = &quot;output/RRBS/sample_meta.RDS&quot;)
+meta$genotype[meta$sample_id==&quot;34158&quot;] &lt;- &quot;CT&quot;
+meta$genotype[meta$sample_id==&quot;34163&quot;] &lt;- &quot;TT&quot;
 
 hmc &lt;- read_tsv(&quot;data/homocysteine.txt&quot;, col_types = cols(&quot;c&quot;,&quot;n&quot;))
 
-meta &lt;- left_join(meta, hmc, by=&quot;tag_id&quot;)</code></pre>
+meta &lt;- left_join(meta, hmc, by=&quot;tag_id&quot;) %&gt;%
+  dplyr::select(sample_id, genotype, sex, age, hmc) %&gt;%
+  arrange(genotype, age, sex)</code></pre>
 </div>
 <div id="pattern-of-methylation" class="section level2 tabset tabset-fade tabset-pills">
 <h2>Pattern of Methylation</h2>
@@ -465,7 +482,7 @@ meta &lt;- left_join(meta, hmc, by=&quot;tag_id&quot;)</code></pre>
 <h4>PCA</h4>
 <pre class="r"><code>pc &lt;- prcomp(site_meth, center = TRUE)
 plot(pc)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern_withOutliers-1.png" /><!-- --></p>
+<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern_withOutliers-1.png" width="672" /></p>
 <pre class="r"><code>df &lt;- left_join(dplyr::select(meta, age, sex, genotype, sample_id),
                 as_tibble(pc$x[,1:2], rownames = &quot;sample_id&quot;),
                 by=&quot;sample_id&quot;)
@@ -476,7 +493,7 @@ ggplot(df, aes(x=PC1,y=PC2)) +
   geom_point(aes(shape=sex, color=genotype, size=age)) +
   scale_size_discrete(range=c(3,1.5)) +
   geom_text(data=outliers, aes(label=sample_id), vjust = &quot;inward&quot;,  hjust = &quot;inward&quot;)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern_withOutliers-2.png" /><!-- --></p>
+<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern_withOutliers-2.png" width="672" /></p>
 <pre class="r"><code>rm(df)</code></pre>
 </div>
 </div>
@@ -488,14 +505,14 @@ meta.wou &lt;- filter(meta, !sample_id %in% outliers$sample_id)</code></pre>
 <h4>PCA</h4>
 <pre class="r"><code>pc &lt;- prcomp(site_meth.wou, center = TRUE)
 plot(pc)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern__noOutliers-1.png" /><!-- --></p>
+<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern__noOutliers-1.png" width="672" /></p>
 <pre class="r"><code>left_join(select(meta.wou, age, sex, genotype, sample_id),
                 as_tibble(pc$x[,1:2], rownames = &quot;sample_id&quot;),
                 by=&quot;sample_id&quot;) %&gt;%
   ggplot(aes(x=PC1,y=PC2)) + 
   geom_point(aes(shape=sex, color=genotype, size=age)) +
   scale_size_discrete(range=c(3,1.5)) </code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern__noOutliers-2.png" /><!-- --></p>
+<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/pattern__noOutliers-2.png" width="672" /></p>
 <pre class="r"><code>#+
 #  geom_text(data=outliers, aes(label=sample_id), vjust = -0.5,  hjust = -0.5)</code></pre>
 </div>
@@ -522,13 +539,13 @@ meta.gm &lt;-  left_join(meta, global_meth_counts, by=&quot;sample_id&quot;)</co
 model = betareg(global_meth_counts ~ genotype + age + sex, data = br.df)
 emmeans::joint_tests(model)</code></pre>
 <pre><code>##  model term df1 df2 F.ratio p.value
-##  genotype     1 Inf   0.235 0.6278 
-##  age          1 Inf   0.550 0.4582 
-##  sex          1 Inf   0.315 0.5744</code></pre>
+##  genotype     1 Inf   0.169 0.6813 
+##  age          1 Inf   0.548 0.4592 
+##  sex          1 Inf   0.314 0.5754</code></pre>
 <pre class="r"><code>ggplot(meta.gm, aes(x=genotype, y=global_meth_counts, color=age)) +
   geom_point() +
   facet_wrap(~ sex)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/global_meth_counts_betareg-1.png" /><!-- --></p>
+<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/global_meth_counts_betareg-1.png" width="672" /></p>
 </div>
 <div id="mean-percent" class="section level3">
 <h3>Mean Percent</h3>
@@ -545,39 +562,45 @@ br.df &lt;- meta.gm %&gt;%
 model = betareg(global_meth_perc ~ genotype + age + sex, data = br.df)
 emmeans::joint_tests(model)</code></pre>
 <pre><code>##  model term df1 df2 F.ratio p.value
-##  genotype     1 Inf   0.221 0.6379 
-##  age          1 Inf   1.159 0.2818 
-##  sex          1 Inf   0.027 0.8694</code></pre>
+##  genotype     1 Inf   0.105 0.7464 
+##  age          1 Inf   1.162 0.2811 
+##  sex          1 Inf   0.028 0.8677</code></pre>
 <pre class="r"><code>ggplot(meta.gm, aes(x=genotype, y=global_meth_perc, color=age)) +
   geom_point() +
   facet_wrap(~ sex)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/global_meth_percent_betareg-1.png" /><!-- --></p>
+<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/global_meth_percent_betareg-1.png" width="672" /></p>
 </div>
-<div id="correlation-with-homocysteine-level" class="section level3">
-<h3>Correlation with homocysteine level</h3>
+</div>
+<div id="correlation-with-homocysteine-level" class="section level2 tabset tabset-fade tabset-pills">
+<h2>Correlation with homocysteine level</h2>
+<div id="counts-1" class="section level3">
+<h3>Counts</h3>
 <pre class="r"><code>ggplot(meta.gm, aes(x = hmc, y = global_meth_counts)) + 
   geom_point(aes(shape=sex, color=genotype, size=age)) +
   scale_size_discrete(range=c(3,1.5)) +
   ggtitle(&quot;Counts&quot;)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/hmc-1.png" width="50%" /></p>
+<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/hmc_counts-1.png" width="672" /></p>
+</div>
+<div id="mean-percent-1" class="section level3">
+<h3>Mean Percent</h3>
 <pre class="r"><code>ggplot(meta.gm, aes(x = hmc, y = global_meth_perc)) + 
   geom_point(aes(shape=sex, color=genotype, size=age)) +
   scale_size_discrete(range=c(3,1.5)) +
   ggtitle(&quot;Percent&quot;)</code></pre>
-<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/hmc-2.png" width="50%" /></p>
+<p><img src="RRBS_2_Exploratory_Analysis_files/figure-html/hmc_perc-1.png" width="672" /></p>
 </div>
 </div>
 <div id="output" class="section level2">
 <h2>Output</h2>
-<p>Uploading sample metadata with their global methylation values to <a href="https://www.synapse.org/#!Synapse:syn23573590/wiki/607402">Synapse</a></p>
-<pre class="r"><code>write_csv(meta.gm, file=&quot;output/RRBS/2_Exploratory_Analysis/RRBS_meta_globalmeth.csv&quot;)
+<p>Uploading global methylation and homocysteine values to <a href="https://www.synapse.org/#!Synapse:syn25834048">Synapse</a></p>
+<pre class="r"><code>write_csv(meta.gm, file=&quot;output/RRBS/2_Exploratory_Analysis/RRBS_globalmeth_hmc.csv&quot;)
 
 # upload meta_global_meth to synapse
 synLogin() 
 
-file &lt;- File(&quot;output/RRBS/2_Exploratory_Analysis/RRBS_meta_globalmeth.csv&quot;,
+file &lt;- File(&quot;output/RRBS/2_Exploratory_Analysis/RRBS_globalmeth_hmc.csv&quot;,
              contentType = &quot;text/plain&quot;,
-             description = &quot;RRBS sample metadata with their global methylation values&quot;,
+             description = &quot;global methylation and homocysteine values&quot;,
              parent = &quot;syn25174486&quot;)
 
 provenance &lt;- Activity(used = c(&quot;syn25174542&quot;, &quot;syn25174517&quot;),
@@ -586,6 +609,7 @@ provenance &lt;- Activity(used = c(&quot;syn25174542&quot;, &quot;syn25174517&qu
 file &lt;- synStore(file, activity=provenance)</code></pre>
 </div>
 
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiTVRIRlIgUlJCUyBFeHBsb3JhdG9yeSBBbmFseXNpcyIKYXV0aG9yOiAiQW5uYXQgSGFiZXIiCmRhdGU6ICdgciBTeXMuRGF0ZSgpYCcKb3V0cHV0OiAKICBodG1sX2RvY3VtZW50OgogICAgdG9jOiB0cnVlCiAgICB0b2NfZGVwdGg6IDMKICAgIGNvZGVfZm9sZGluZzogaGlkZQotLS0KCmBgYHtyIHNldHVwLCBpbmNsdWRlPUZBTFNFfQprbml0cjo6b3B0c19jaHVuayRzZXQoZWNobyA9IFRSVUUpCmtuaXRyOjpvcHRzX2tuaXQkc2V0KHJvb3QuZGlyID0gcnByb2pyb290OjpmaW5kX3JzdHVkaW9fcm9vdF9maWxlKCkpCmtuaXRyOjpvcHRzX2NodW5rJHNldChjYWNoZT1UUlVFLCBjYWNoZS5leHRyYSA9IFIudmVyc2lvbiwgCiAgICAgICAgICAgICAgICAgICAgICAjY2FjaGUucGF0aCA9ICJvdXRwdXQvUlJCUy8yX0V4cGxvcmF0b3J5X0FuYWx5c2lzLyIsCiAgICAgICAgICAgICAgICAgICAgICBtZXNzYWdlPUZBTFNFLCB3YXJuaW5nPUZBTFNFKQpgYGAKCmBgYHtyIGxpYnJhcmllc30Kcm0obGlzdD1scygpKQoKc3VwcHJlc3NQYWNrYWdlU3RhcnR1cE1lc3NhZ2VzKHsKICBsaWJyYXJ5KHN5bmFwc2VyKQogICNsaWJyYXJ5KG1ldGh5bEtpdCkKICBsaWJyYXJ5KHRpZHl2ZXJzZSkKICBsaWJyYXJ5KGJldGFyZWcpCiAgbGlicmFyeShlbW1lYW5zKQogIGxpYnJhcnkoQ29tcGxleEhlYXRtYXApCn0pCmBgYAoKIyMgSW5wdXQKSW5wdXQgaXMgcGVyY2VudCBtZXRoeWxhdGlvbiBpbiBlYWNoIHNpdGUgZm9yIGVhY2ggc2FtcGxlIChzYW1wbGVzIHggc2l0ZXMgbWF0cml4KSwgaW5jbHVkaW5nIG9ubHkgc2l0ZXMgd2l0aGluIENwRyBjb250ZXh0IHRoYXQgYXJlIGNvdmVyZWQgaW4gYWxsIHNhbXBsZXMgd2l0aCBhdCBsZWFzdCAxMHggY292ZXJhZ2UuClN3aXRjaGluZyBnZW5vdHlwZXMgZm9yIHR3byBzYW1wbGVzIGJhc2VkIG9uIFt0aGUgUUNdKFJOQXNlcV8xX1Byb2Nlc3NpbmdfUUMpOiAgCjM0MTU4IGZyb20gVFQgdG8gQ1QgIAozNDE2MyBmcm9tIENUIHRvIFRUICAKYGBge3IgaW5wdXR9CnNpdGVfbWV0aCA8LSByZWFkUkRTKGZpbGUgPSAib3V0cHV0L1JSQlMvMV9Qcm9jZXNzaW5nX1FDL3BlcnNpdGVfbWV0aC5SRFMiKQojIG1ldGEKbWV0YSA8LSByZWFkUkRTKGZpbGUgPSAib3V0cHV0L1JSQlMvc2FtcGxlX21ldGEuUkRTIikKbWV0YSRnZW5vdHlwZVttZXRhJHNhbXBsZV9pZD09IjM0MTU4Il0gPC0gIkNUIgptZXRhJGdlbm90eXBlW21ldGEkc2FtcGxlX2lkPT0iMzQxNjMiXSA8LSAiVFQiCgpobWMgPC0gcmVhZF90c3YoImRhdGEvaG9tb2N5c3RlaW5lLnR4dCIsIGNvbF90eXBlcyA9IGNvbHMoImMiLCJuIikpCgptZXRhIDwtIGxlZnRfam9pbihtZXRhLCBobWMsIGJ5PSJ0YWdfaWQiKSAlPiUKICBkcGx5cjo6c2VsZWN0KHNhbXBsZV9pZCwgZ2Vub3R5cGUsIHNleCwgYWdlLCBobWMpICU+JQogIGFycmFuZ2UoZ2Vub3R5cGUsIGFnZSwgc2V4KQoKYGBgCgojIyBQYXR0ZXJuIG9mIE1ldGh5bGF0aW9uIHsudGFic2V0IC50YWJzZXQtZmFkZSAudGFic2V0LXBpbGxzfQoKIyMjIFdpdGggT3V0bGllcnMKIyMjIyBQQ0EKYGBge3IsIHBhdHRlcm5fd2l0aE91dGxpZXJzfQpwYyA8LSBwcmNvbXAoc2l0ZV9tZXRoLCBjZW50ZXIgPSBUUlVFKQpwbG90KHBjKQoKZGYgPC0gbGVmdF9qb2luKGRwbHlyOjpzZWxlY3QobWV0YSwgYWdlLCBzZXgsIGdlbm90eXBlLCBzYW1wbGVfaWQpLAogICAgICAgICAgICAgICAgYXNfdGliYmxlKHBjJHhbLDE6Ml0sIHJvd25hbWVzID0gInNhbXBsZV9pZCIpLAogICAgICAgICAgICAgICAgYnk9InNhbXBsZV9pZCIpCgpvdXRsaWVycyA8LSBkZiAlPiUgZmlsdGVyKGFicyhQQzEpID4gMjAwMCB8IGFicyhQQzIpID4gMjAwMCkKICAKZ2dwbG90KGRmLCBhZXMoeD1QQzEseT1QQzIpKSArIAogIGdlb21fcG9pbnQoYWVzKHNoYXBlPXNleCwgY29sb3I9Z2Vub3R5cGUsIHNpemU9YWdlKSkgKwogIHNjYWxlX3NpemVfZGlzY3JldGUocmFuZ2U9YygzLDEuNSkpICsKICBnZW9tX3RleHQoZGF0YT1vdXRsaWVycywgYWVzKGxhYmVsPXNhbXBsZV9pZCksIHZqdXN0ID0gImlud2FyZCIsICBoanVzdCA9ICJpbndhcmQiKQoKcm0oZGYpCmBgYAoKYGBge3IsIGJ5U2l0ZV93aXRoT3V0bGllcnMsIGV2YWw9RkFMU0UsIGluY2x1ZGU9RkFMU0V9Cgpjb2xzID0gbGlzdChzZXggPSBjKCJGIiA9ICJwaW5rIiwgIk0iID0gImxpZ2h0Ymx1ZSIpLAogICAgICAgICAgIGFnZSA9IGMoIjYiID0gImJsdWUiLCAiMTgiID0gImRhcmtibHVlIiksCiAgICAgICAgICAgZ2Vub3R5cGUgPSBjKCJDQyIgPSAieWVsbG93IiwgIkNUIiA9ICJvcmFuZ2UiLCAiVFQiID0gInJlZCIpKQojIENyZWF0ZSB0aGUgaGVhdG1hcCBhbm5vdGF0aW9uCmhhIDwtIEhlYXRtYXBBbm5vdGF0aW9uKHNleCA9IG1ldGEkc2V4LCBhZ2UgPSBtZXRhJGFnZSwgZ2Vub3R5cGUgPSBtZXRhJGdlbm90eXBlLCBjb2w9Y29scykKCkhlYXRtYXAodChzaXRlX21ldGgpLAogICAgICAgIHNob3dfcm93X2RlbmQgPSBGQUxTRSwKICAgICAgICBzaG93X3Jvd19uYW1lcyA9IEZBTFNFLAogICAgICAgIGhlYXRtYXBfbGVnZW5kX3BhcmFtID0gbGlzdCh0aXRsZSA9ICJNZXRobGF0aW9uICUiKSwKICAgICAgICAjY2x1c3Rlcl9yb3dzID0gRkFMU0UsIAogICAgICAgICNjbHVzdGVyaW5nX21ldGhvZF9jb2x1bW5zPSJ3YXJkLkQyIiwgCiAgICAgICAgI2NvbCA9IGhjbC5jb2xvcnMoMTIsICJZbE9yUmQiLCByZXYgPSBUUlVFKSwKICAgICAgICB0b3BfYW5ub3RhdGlvbiA9IGhhCiAgICAgICAgKQpgYGAKCiMjIyBXaXRob3V0IE91dGxpZXJzCmBgYHtyIHJtX291bH0Kc2l0ZV9tZXRoLndvdSA8LSBzaXRlX21ldGhbLXdoaWNoKHJvd25hbWVzKHNpdGVfbWV0aCkgJWluJSBvdXRsaWVycyRzYW1wbGVfaWQpLF0KbWV0YS53b3UgPC0gZmlsdGVyKG1ldGEsICFzYW1wbGVfaWQgJWluJSBvdXRsaWVycyRzYW1wbGVfaWQpCmBgYAoKIyMjIyBQQ0EKYGBge3IsIHBhdHRlcm5fX25vT3V0bGllcnN9CnBjIDwtIHByY29tcChzaXRlX21ldGgud291LCBjZW50ZXIgPSBUUlVFKQpwbG90KHBjKQoKbGVmdF9qb2luKHNlbGVjdChtZXRhLndvdSwgYWdlLCBzZXgsIGdlbm90eXBlLCBzYW1wbGVfaWQpLAogICAgICAgICAgICAgICAgYXNfdGliYmxlKHBjJHhbLDE6Ml0sIHJvd25hbWVzID0gInNhbXBsZV9pZCIpLAogICAgICAgICAgICAgICAgYnk9InNhbXBsZV9pZCIpICU+JQogIGdncGxvdChhZXMoeD1QQzEseT1QQzIpKSArIAogIGdlb21fcG9pbnQoYWVzKHNoYXBlPXNleCwgY29sb3I9Z2Vub3R5cGUsIHNpemU9YWdlKSkgKwogIHNjYWxlX3NpemVfZGlzY3JldGUocmFuZ2U9YygzLDEuNSkpIAojKwojICBnZW9tX3RleHQoZGF0YT1vdXRsaWVycywgYWVzKGxhYmVsPXNhbXBsZV9pZCksIHZqdXN0ID0gLTAuNSwgIGhqdXN0ID0gLTAuNSkKYGBgCiAgCiAKYGBge3IsIGJ5U2l0ZV9ub091dGxpZXJzLCBpbmNsdWRlPUZBTFNFLCBldmFsPUZBTFNFfQpjb2xzID0gbGlzdChzZXggPSBjKCJGIiA9ICJwaW5rIiwgIk0iID0gImxpZ2h0Ymx1ZSIpLAogICAgICAgICAgIGFnZSA9IGMoIjYiID0gImJsdWUiLCAiMTgiID0gImRhcmtibHVlIiksCiAgICAgICAgICAgZ2Vub3R5cGUgPSBjKCJDQyIgPSAieWVsbG93IiwgIkNUIiA9ICJvcmFuZ2UiLCAiVFQiID0gInJlZCIpKQojIENyZWF0ZSB0aGUgaGVhdG1hcCBhbm5vdGF0aW9uCmhhIDwtIEhlYXRtYXBBbm5vdGF0aW9uKHNleCA9IG1ldGEud291JHNleCwgYWdlID0gbWV0YS53b3UkYWdlLCBnZW5vdHlwZSA9IG1ldGEud291JGdlbm90eXBlLCBjb2w9Y29scykKCkhlYXRtYXAodChzaXRlX21ldGgud291KSwKICAgICAgICBzaG93X3Jvd19kZW5kID0gRkFMU0UsCiAgICAgICAgc2hvd19yb3dfbmFtZXMgPSBGQUxTRSwKICAgICAgICBoZWF0bWFwX2xlZ2VuZF9wYXJhbSA9IGxpc3QodGl0bGUgPSAiTWV0aGxhdGlvbiAlIiksCiAgICAgICAgI2NsdXN0ZXJfcm93cyA9IEZBTFNFLCAKICAgICAgICAjY2x1c3RlcmluZ19tZXRob2RfY29sdW1ucz0id2FyZC5EMiIsIAogICAgICAgIGNvbCA9IGhjbC5jb2xvcnMoMTIsICJZbE9yUmQiLCByZXYgPSBUUlVFKSwKICAgICAgICB0b3BfYW5ub3RhdGlvbiA9IGhhCiAgICAgICAgKQpgYGAKCiMjIEdsb2JhbCBtZXRoeWxhdGlvbiB7LnRhYnNldCAudGFic2V0LWZhZGUgLnRhYnNldC1waWxsc30KIyMjIENvdW50cwpDYWxjdWxhdGluZyBnbG9iYWwgbWV0aHlsYXRpb24gYXMgdGhlIGZyYWN0aW9uIG9mIHNpdGVzIGRldGVybWluZWQgYXMgbWV0aHlsYXRlZCBieSBiaXNtYXJrIGZvciBlYWNoIHNhbXBsZS4KYGBge3IgZ2xvYmFsX21ldGhfY291bnRzfQpnbG9iYWxfbWV0aF9jb3VudHMgPC0gcmVhZF90c3YoIm91dHB1dC9SUkJTLzFfUHJvY2Vzc2luZ19RQy9uZl9tZXRoeWxzZXFfb3V0cHV0L2Jpc21hcmtfc3VtbWFyeS9iaXNtYXJrX3N1bW1hcnlfcmVwb3J0LnR4dCIpICU+JQogIHRpYmJsZSgubmFtZV9yZXBhaXIgPSAidW5pdmVyc2FsIikgJT4lCiAgbXV0YXRlKHNhbXBsZV9pZCA9IHN1YnN0cihGaWxlLCAxLCA1KSwKICAgICAgICAgZ2xvYmFsX21ldGhfY291bnRzID0gTWV0aHlsYXRlZC5DcEdzIC8gKE1ldGh5bGF0ZWQuQ3BHcyArIFVubWV0aHlsYXRlZC5DcEdzKSApICU+JQogIHNlbGVjdChnbG9iYWxfbWV0aF9jb3VudHMsIHNhbXBsZV9pZCkKCm1ldGEuZ20gPC0gIGxlZnRfam9pbihtZXRhLCBnbG9iYWxfbWV0aF9jb3VudHMsIGJ5PSJzYW1wbGVfaWQiKQoKYGBgCgpVc2luZyBCZXRhIHJlZ3Jlc3Npb24gdG8gdGVzdCBkaWZmZXJlbmNlcyBpbiBnbG9iYWwgbWV0aHlsYXRpb24gYXMgYSBmdW5jdGlvbiBvZiBzZXgsIGFnZSwgYW5kIGdlbm90eXBlLiBOb25lIG9mIHRoZSBmYWN0b3JzIGFuZCBpbnRlcmFjdGlvbnMgaXMgc2lnbmlmaWNhbnQuCmBgYHtyLCBnbG9iYWxfbWV0aF9jb3VudHNfYmV0YXJlZ30KCmJyLmRmIDwtIG1ldGEuZ20gJT4lCiAgbXV0YXRlKGdlbm90eXBlID0gcmVjb2RlKGdlbm90eXBlLCAiQ0MiPTAsICJDVCI9MSwgIlRUIj0yKSwKICAgICAgICAgc2V4ID0gcmVjb2RlKHNleCwgIkYiPTAsICJNIj0xKSwKICAgICAgICAgYWdlID0gcmVjb2RlKGFnZSwgIjYiPTAsICIxOCI9MSkpCiAgIAptb2RlbCA9IGJldGFyZWcoZ2xvYmFsX21ldGhfY291bnRzIH4gZ2Vub3R5cGUgKyBhZ2UgKyBzZXgsIGRhdGEgPSBici5kZikKZW1tZWFuczo6am9pbnRfdGVzdHMobW9kZWwpCgpnZ3Bsb3QobWV0YS5nbSwgYWVzKHg9Z2Vub3R5cGUsIHk9Z2xvYmFsX21ldGhfY291bnRzLCBjb2xvcj1hZ2UpKSArCiAgZ2VvbV9wb2ludCgpICsKICBmYWNldF93cmFwKH4gc2V4KQoKYGBgCgojIyMgTWVhbiBQZXJjZW50CkNhbGN1bGF0aW5nIGdsb2JhbCBtZXRoeWxhdGlvbiBhcyB0aGUgbWVhbiBwZXJjZW50IG1ldGh5bGF0aW9uIGZvciBlYWNoIHNhbXBsZSwgYXZlcmFnZWQgYWNyb3NzIHNpdGVzLgpgYGB7ciBnbG9iYWxfbWV0aF9wZXJjZW50fQpnbG9iYWxfbWV0aF9wZXJjIDwtIGRhdGEuZnJhbWUoZ2xvYmFsX21ldGhfcGVyYz1yb3dNZWFucyhzaXRlX21ldGgpLzEwMCwgc2FtcGxlX2lkPXJvd25hbWVzKHNpdGVfbWV0aCkpCmBgYAoKVXNpbmcgQmV0YSByZWdyZXNzaW9uIHRvIHRlc3QgZGlmZmVyZW5jZXMgaW4gZ2xvYmFsIG1ldGh5bGF0aW9uIGFzIGEgZnVuY3Rpb24gb2Ygc2V4LCBhZ2UsIGFuZCBnZW5vdHlwZS4gTm9uZSBvZiB0aGUgZmFjdG9ycyBhbmQgaW50ZXJhY3Rpb25zIGlzIHNpZ25pZmljYW50LgpgYGB7ciwgZ2xvYmFsX21ldGhfcGVyY2VudF9iZXRhcmVnfQptZXRhLmdtIDwtICBsZWZ0X2pvaW4obWV0YS5nbSwgZ2xvYmFsX21ldGhfcGVyYywgYnk9InNhbXBsZV9pZCIpCgpici5kZiA8LSBtZXRhLmdtICU+JQogIG11dGF0ZShnZW5vdHlwZSA9IHJlY29kZShnZW5vdHlwZSwgIkNDIj0wLCAiQ1QiPTEsICJUVCI9MiksCiAgICAgICAgIHNleCA9IHJlY29kZShzZXgsICJGIj0wLCAiTSI9MSksCiAgICAgICAgIGFnZSA9IHJlY29kZShhZ2UsICI2Ij0wLCAiMTgiPTEpKQogICAKbW9kZWwgPSBiZXRhcmVnKGdsb2JhbF9tZXRoX3BlcmMgfiBnZW5vdHlwZSArIGFnZSArIHNleCwgZGF0YSA9IGJyLmRmKQplbW1lYW5zOjpqb2ludF90ZXN0cyhtb2RlbCkKCmdncGxvdChtZXRhLmdtLCBhZXMoeD1nZW5vdHlwZSwgeT1nbG9iYWxfbWV0aF9wZXJjLCBjb2xvcj1hZ2UpKSArCiAgZ2VvbV9wb2ludCgpICsKICBmYWNldF93cmFwKH4gc2V4KQoKYGBgCgojIyBDb3JyZWxhdGlvbiB3aXRoIGhvbW9jeXN0ZWluZSBsZXZlbCB7LnRhYnNldCAudGFic2V0LWZhZGUgLnRhYnNldC1waWxsc30KIyMjIENvdW50cwpgYGB7ciBobWNfY291bnRzfQpnZ3Bsb3QobWV0YS5nbSwgYWVzKHggPSBobWMsIHkgPSBnbG9iYWxfbWV0aF9jb3VudHMpKSArIAogIGdlb21fcG9pbnQoYWVzKHNoYXBlPXNleCwgY29sb3I9Z2Vub3R5cGUsIHNpemU9YWdlKSkgKwogIHNjYWxlX3NpemVfZGlzY3JldGUocmFuZ2U9YygzLDEuNSkpICsKICBnZ3RpdGxlKCJDb3VudHMiKQpgYGAKCiMjIyBNZWFuIFBlcmNlbnQKYGBge3IgaG1jX3BlcmN9CmdncGxvdChtZXRhLmdtLCBhZXMoeCA9IGhtYywgeSA9IGdsb2JhbF9tZXRoX3BlcmMpKSArIAogIGdlb21fcG9pbnQoYWVzKHNoYXBlPXNleCwgY29sb3I9Z2Vub3R5cGUsIHNpemU9YWdlKSkgKwogIHNjYWxlX3NpemVfZGlzY3JldGUocmFuZ2U9YygzLDEuNSkpICsKICBnZ3RpdGxlKCJQZXJjZW50IikKYGBgCgoKIyMgT3V0cHV0ClVwbG9hZGluZyBnbG9iYWwgbWV0aHlsYXRpb24gYW5kIGhvbW9jeXN0ZWluZSB2YWx1ZXMgdG8gW1N5bmFwc2VdKGh0dHBzOi8vd3d3LnN5bmFwc2Uub3JnLyMhU3luYXBzZTpzeW4yNTgzNDA0OCkKYGBge3Igb3V0cHV0LCByZXN1bHRzPSdoaWRlJ30Kd3JpdGVfY3N2KG1ldGEuZ20sIGZpbGU9Im91dHB1dC9SUkJTLzJfRXhwbG9yYXRvcnlfQW5hbHlzaXMvUlJCU19nbG9iYWxtZXRoX2htYy5jc3YiKQoKIyB1cGxvYWQgbWV0YV9nbG9iYWxfbWV0aCB0byBzeW5hcHNlCnN5bkxvZ2luKCkgCgpmaWxlIDwtIEZpbGUoIm91dHB1dC9SUkJTLzJfRXhwbG9yYXRvcnlfQW5hbHlzaXMvUlJCU19nbG9iYWxtZXRoX2htYy5jc3YiLAogICAgICAgICAgICAgY29udGVudFR5cGUgPSAidGV4dC9wbGFpbiIsCiAgICAgICAgICAgICBkZXNjcmlwdGlvbiA9ICJnbG9iYWwgbWV0aHlsYXRpb24gYW5kIGhvbW9jeXN0ZWluZSB2YWx1ZXMiLAogICAgICAgICAgICAgcGFyZW50ID0gInN5bjI1MTc0NDg2IikKCnByb3ZlbmFuY2UgPC0gQWN0aXZpdHkodXNlZCA9IGMoInN5bjI1MTc0NTQyIiwgInN5bjI1MTc0NTE3IiksCiAgICAgICAgICAgICAgICAgICAgICAgZXhlY3V0ZWQgPSAiaHR0cHM6Ly9naXRodWIuY29tL1RoZUphY2tzb25MYWJvcmF0b3J5L01USEZSX0M2NjdUL2Jsb2IvbWFzdGVyL1JSQlNfMl9FeHBsb3JhdG9yeV9BbmFseXNpcy5SbWQiKQoKZmlsZSA8LSBzeW5TdG9yZShmaWxlLCBhY3Rpdml0eT1wcm92ZW5hbmNlKQpgYGAKCg==</div>
 
 
 </div>
@@ -623,6 +647,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
+  window.initializeSourceEmbed("RRBS_2_Exploratory_Analysis.Rmd");
   window.initializeCodeFolding("hide" === "show");
 });
 </script>

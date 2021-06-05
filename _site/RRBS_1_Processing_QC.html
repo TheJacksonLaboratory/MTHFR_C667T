@@ -11,7 +11,7 @@
 
 <meta name="author" content="Annat Haber" />
 
-<meta name="date" content="2021-05-19" />
+<meta name="date" content="2021-06-04" />
 
 <title>RRBS Processing and QC</title>
 
@@ -35,6 +35,7 @@
 <script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <script src="site_libs/navigation-1.1/codefolding.js"></script>
+<script src="site_libs/navigation-1.1/sourceembed.js"></script>
 <link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
 <link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
@@ -62,6 +63,11 @@ if (window.hljs) {
 
 
 
+<style type="text/css">
+#rmd-source-code {
+  display: none;
+}
+</style>
 
 
 
@@ -348,6 +354,24 @@ div.tocify {
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    RNAseq
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="RNAseq_0_Sample_Metadata.html">Sample Metadata</a>
+    </li>
+    <li>
+      <a href="RNAseq_1_Processing_QC.html">Processing and QC</a>
+    </li>
+    <li>
+      <a href="RNAseq_2_Differential_Expression.html">Differential Expression</a>
+    </li>
+  </ul>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
     RRBS
      
     <span class="caret"></span>
@@ -363,27 +387,12 @@ div.tocify {
       <a href="RRBS_2_Exploratory_Analysis.html">Exploratory Analysis</a>
     </li>
     <li>
-      <a href="RRBS_3_Differential_Methylation.html">Differential Methylation</a>
+      <a href="RRBS_3_Differential_Methylation_gt.html">Differential Methylation; pooled sex and age</a>
+    </li>
+    <li>
+      <a href="RRBS_3_Differential_Methylation_gtsxag.html">Differential Methylation; separate sex and age</a>
     </li>
     <li class="dropdown-header">Methylation by Position</li>
-  </ul>
-</li>
-<li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-    RNAseq
-     
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu" role="menu">
-    <li>
-      <a href="RNAseq_0_Sample_Metadata.html">Sample Metadata</a>
-    </li>
-    <li>
-      <a href="RNAseq_1_Processing_QC.html">Processing and QC</a>
-    </li>
-    <li>
-      <a href="RNAseq_2_Differential_Expression.html">Differential Expression</a>
-    </li>
   </ul>
 </li>
       </ul>
@@ -424,6 +433,8 @@ div.tocify {
 <ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
 <li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
 <li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+<li role="separator" class="divider"></li>
+<li><a id="rmd-download-source" href="#">Download Rmd</a></li>
 </ul>
 </div>
 
@@ -431,7 +442,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">RRBS Processing and QC</h1>
 <h4 class="author">Annat Haber</h4>
-<h4 class="date">2021-05-19</h4>
+<h4 class="date">2021-06-04</h4>
 
 </div>
 
@@ -439,9 +450,9 @@ div.tocify {
 <pre class="r"><code>knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 knitr::opts_chunk$set(message=FALSE, warning=FALSE, cache = TRUE)</code></pre>
 <pre class="r"><code>suppressPackageStartupMessages({
+  library(synapser)
   library(methylKit)
   library(tidyverse)
-  library(synapser)
 })</code></pre>
 <pre class="r"><code>meta &lt;- readRDS(&quot;output/RRBS/sample_meta.RDS&quot;) %&gt;% arrange(genotype,sex, age)</code></pre>
 <div id="linking-input-fastq-files" class="section level2">
@@ -828,8 +839,16 @@ Coverage is highly right-skewed, which tells us that we don’t need to worry ab
 <pre class="r"><code>saveRDS(united_meth, file=&quot;output/RRBS/1_Processing_QC/united_meth.RDS&quot;)
 saveRDS(site_meth, file=&quot;output/RRBS/1_Processing_QC/persite_meth.RDS&quot;)
 write_csv(data.frame(site_meth), file=&quot;output/RRBS/1_Processing_QC/RRBS_persite_meth.csv&quot;)</code></pre>
-<p>Uploading percent methylation per site to <a href="https://www.synapse.org/#!Synapse:syn23573590/wiki/607402">Synapse</a> as csv file.</p>
+<p>Uploading to <a href="https://www.synapse.org/#!Synapse:syn25174486">Synapse</a> percent methylation per site as csv file and the raw methylKit object (fitered and merged).</p>
 <pre class="r"><code>synLogin() 
+
+file &lt;- File(&quot;output/RRBS/1_Processing_QC/united_meth.RDS&quot;,
+             contentType = &quot;text/plain&quot;,
+             description = &quot;RRBS raw methylKit; filtered for coverage x10 and including only sites that are covered in all samples&quot;,
+             parent = &quot;syn25174486&quot;)
+provenance &lt;- Activity(used = &quot;syn25174517&quot;,
+                       executed = &quot;https://github.com/TheJacksonLaboratory/MTHFR_C667T/blob/master/RRBS_1_Processing_QC.Rmd&quot;)
+file &lt;- synStore(file, activity=provenance)
 
 file &lt;- File(&quot;output/RRBS/1_Processing_QC/RRBS_persite_meth.csv&quot;,
              contentType = &quot;text/plain&quot;,
@@ -840,6 +859,7 @@ provenance &lt;- Activity(used = &quot;syn25174517&quot;,
 file &lt;- synStore(file, activity=provenance)</code></pre>
 </div>
 
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiUlJCUyBQcm9jZXNzaW5nIGFuZCBRQyIKYXV0aG9yOiAiQW5uYXQgSGFiZXIiCmRhdGU6ICdgciBTeXMuRGF0ZSgpYCcKb3V0cHV0OgogIGh0bWxfZG9jdW1lbnQ6CiAgICB0b2M6IHRydWUKICAgIGNvZGVfZm9sZGluZzogaGlkZQotLS0KCmBgYHtyIHNldHVwLCB3YXJuaW5nPUZBTFNFLCBtZXNzYWdlPUZBTFNFfQprbml0cjo6b3B0c19rbml0JHNldChyb290LmRpciA9IHJwcm9qcm9vdDo6ZmluZF9yc3R1ZGlvX3Jvb3RfZmlsZSgpKQprbml0cjo6b3B0c19jaHVuayRzZXQobWVzc2FnZT1GQUxTRSwgd2FybmluZz1GQUxTRSwgY2FjaGUgPSBUUlVFKQpgYGAKCmBgYHtyIGxpYnJhcmllc30Kc3VwcHJlc3NQYWNrYWdlU3RhcnR1cE1lc3NhZ2VzKHsKICBsaWJyYXJ5KHN5bmFwc2VyKQogIGxpYnJhcnkobWV0aHlsS2l0KQogIGxpYnJhcnkodGlkeXZlcnNlKQp9KQpgYGAKCmBgYHtyIG1ldGFkYXRhfQptZXRhIDwtIHJlYWRSRFMoIm91dHB1dC9SUkJTL3NhbXBsZV9tZXRhLlJEUyIpICU+JSBhcnJhbmdlKGdlbm90eXBlLHNleCwgYWdlKQpgYGAKCiMjIExpbmtpbmcgaW5wdXQgZmFzdHEgZmlsZXMKQ3JlYXRpbmcgc3ltYm9saWMgbGlua3MgdG8gdGhlIG9yaWdpbmFsIGZhc3RxIGZpbGVzLiAgCkZpbGVzIGFyZSByZW5hbWVkIGFzIGA8c2FtcGxlX2lkPi5mYXN0cS5nemAuIFNhbXBsZSBpZHMgYXJlIHBhZGRlZCB3aXRoIHplcm9zIHRvIGhhdmUgZml2ZSBkaWdpdHMgICAgICAKYGBge3Igc3ltbGlua19kYXRhLCBldmFsPUZBTFNFfQojIG9yaWdpbmFsIGZpbGVzIHRvIGxpbmsgdG8Kb3JpZ2ZpbGVzIDwtIGMobGlzdC5maWxlcygiL3Byb2plY3RzL2hvd2VsbC1sYWIvMDBfZmFzdHEvcmVhZ2FhL1JSQlMvMjAyMDA5MDlfMjAtaG93ZWxsLTAwNC1ydW4yIiwKICAgICAgICAgICAgICAgICAgICAgICAgcGF0dGVybj0iLipHVDIwLiouZmFzdHEuZ3oiLCBmdWxsLm5hbWVzID0gVFJVRSksCiAgICAgICAgICAgICAgIGxpc3QuZmlsZXMoIi9wcm9qZWN0cy9ob3dlbGwtbGFiLzAwX2Zhc3RxL3JlYWdhYS9SUkJTLzIwMjAwOTA5XzIwLWhvd2VsbC0wMDQtcnVuMyIsCiAgICAgICAgICAgICAgICAgICAgICAgIHBhdHRlcm49Ii4qR1QyMC4qLmZhc3RxLmd6IiwgZnVsbC5uYW1lcyA9IFRSVUUpKQoKZm9yIChpZCBpbiBtZXRhJHRhZ19pZHMpIHsKICBpZiAoaWQ9PSI0ODI4OSIpIHsgIyMgdHlwbyBpbiB0aGUgZmFzdHEgZmlsZSBuYW1lCiAgICAgIGZsaW5rIDwtIHBhc3RlMCgiZGF0YS9SUkJTLyIsIHN0cl9wYWQoaWQsIDUsIHBhZCA9ICIwIiksICJfUjEuZmFzdHEuZ3oiKSAjIGxpbmsgbmFtZSBhbmQgcGF0aAogICAgICBvZmlsZSA8LSBncmVwKCIvNDkyODlfR1QyMCIsIG9yaWdmaWxlcywgdmFsdWU9VFJVRSkgIyBvcmlnaW5hbCBmaWxlIG5hbWUgYW5kIHBhdGgKICAgICAgZmlsZS5zeW1saW5rKG9maWxlLCBmbGluaykKICB9IGVsc2UgewogICAgICBmbGluayA8LSBwYXN0ZTAoImRhdGEvUlJCUy8iLCBzdHJfcGFkKGlkLCA1LCBwYWQgPSAiMCIpLCAiX1IxLmZhc3RxLmd6IikgIyBsaW5rIG5hbWUgYW5kIHBhdGgKICAgICAgb2ZpbGUgPC0gZ3JlcChwYXN0ZTAoIi8iLGlkLCJfR1QyMCIpLCBvcmlnZmlsZXMsIHZhbHVlPVRSVUUpICMgb3JpZ2luYWwgZmlsZSBuYW1lIGFuZCBwYXRoCiAgICAgIGZpbGUuc3ltbGluayhvZmlsZSwgZmxpbmspCiAgfQp9CgpgYGAKCiMjIFByb2Nlc3NpbmcgZmFzdHEgRmlsZXMKVGhlIGZhc3RxIGZpbGVzIGFyZSBwcm9jZXNzZWQgdXNpbmcgdGhlIFtuZXh0Zmxvdy1jb3JlIG1ldGh5bHNlcSBwaXBlbGluZV0oaHR0cHM6Ly9naXRodWIuY29tL25mLWNvcmUvbWV0aHlsc2VxKSwgYW5kIHN1Ym1pdHRlZCB0byBzdW1uZXIgd2l0aCBbdGhpcyBzY3JpcHRdKGFzc2V0cy9SUkJTX3J1bl9uZl9tZXRoeWxzZXEuc2JhdGNoKS4gIApSZWFkcyB3ZXJlIGFsaWduZWQgdG8gR1JDbTM4IHJlZmVyZW5jZSBnZW5vbWUgYXMgYSBkaXJlY3Rpb25hbCBsaWJyYXJ5LiAKYGBge2Jhc2ggcnVuX25mLCBldmFsPUZBTFNFfQpjZCAvcHJvamVjdHMvY2FydGVyLWxhYi9NVEhGUi9vdXRwdXQvUlJCUy8xX1Byb2Nlc3NpbmdfUUMKc2JhdGNoIHJ1bl9uZl9tZXRoeWxzZXEuc2JhdGNoCmNwIHJ1bl9uZl9tZXRoeWxzZXEuc2JhdGNoIC9wcm9qZWN0cy9jYXJ0ZXItbGFiL01USEZSL2Fzc2V0cy9SUkJTX3J1bl9uZl9tZXRoeWxzZXEuc2JhdGNoCm5leHRmbG93IGNsZWFuIC1mCmBgYAoKIyMgUUM6IFByb2Nlc3NpbmcgUGlwZWxpbmUKU3VtbWFyeSByZXBvcnRzIGdlbmVyYXRlZCBieSB0aGUgcGlwZWxpbmU6CmBgYHtyIHFjX2ZpbGVzLCByZXN1bHRzPSdoaWRlJ30KZmlsZS5jb3B5KGZyb20gPSAib3V0cHV0L1JSQlMvMV9Qcm9jZXNzaW5nX1FDL25mX21ldGh5bHNlcV9vdXRwdXQvcGlwZWxpbmVfaW5mby9yZXN1bHRzX2Rlc2NyaXB0aW9uLmh0bWwiLCAKICAgICAgICAgIHRvID0gIi4vYXNzZXRzL1JSQlNfcmVzdWx0c19kZXNjcmlwdGlvbi5odG1sIiwgCiAgICAgICAgICBvdmVyd3JpdGUgPSBUUlVFLCByZWN1cnNpdmUgPSBGQUxTRSwgY29weS5tb2RlID0gVFJVRSwgY29weS5kYXRlID0gVFJVRSkKZmlsZS5jb3B5KGZyb20gPSAib3V0cHV0L1JSQlMvMV9Qcm9jZXNzaW5nX1FDL25mX21ldGh5bHNlcV9vdXRwdXQvTXVsdGlRQy9tdWx0aXFjX3JlcG9ydC5odG1sIiwgCiAgICAgICAgICB0byA9ICIuL2Fzc2V0cy9SUkJTX211bHRpcWNfcmVwb3J0Lmh0bWwiLCAKICAgICAgICAgIG92ZXJ3cml0ZSA9IFRSVUUsIHJlY3Vyc2l2ZSA9IEZBTFNFLCBjb3B5Lm1vZGUgPSBUUlVFLCBjb3B5LmRhdGUgPSBUUlVFKQpgYGAKMS4gW092ZXJ2aWV3IG9mIHBpcGVsaW5lIGFuZCBvdXRwdXRdKGFzc2V0cy9SUkJTX3Jlc3VsdHNfZGVzY3JpcHRpb24uaHRtbCkgIAoyLiBbUUMgcmVwb3J0IGZvciBhbGwgc3RlcHNdKGFzc2V0cy9SUkJTX211bHRpcWNfcmVwb3J0Lmh0bWwpICAgCgojIyBHZW5lcmF0aW5nIG1ldGh5bGF0aW9uIG9iamVjdHMgCk1ldGh5bGF0aW9uIGNhbGxzIGFyZSBleHRyYWN0ZWQgZnJvbSB0aGUgY292ZXJhZ2UgZmlsZXMgZ2VuZXJhdGVkIGJ5IGJpc21hcmsuICAKYGBge3IgbWV0aF9jb3Z9CmNvdmZpbGVzIDwtIGxpc3QuZmlsZXMoIm91dHB1dC9SUkJTLzFfUHJvY2Vzc2luZ19RQy9uZl9tZXRoeWxzZXFfb3V0cHV0L2Jpc21hcmtfbWV0aHlsYXRpb25fY2FsbHMvbWV0aHlsYXRpb25fY292ZXJhZ2UiLCBmdWxsLm5hbWVzID0gVFJVRSkKbmFtZXMoY292ZmlsZXMpIDwtIGdzdWIoIihcXGQrKV9SMV90cmltbWVkX2Jpc21hcmtfYnQyLmJpc21hcmsuY292Lmd6IiwgIlxcMSIsIGJhc2VuYW1lKGNvdmZpbGVzKSkKY292ZmlsZXMgPC0gYXMubGlzdChjb3ZmaWxlc1ttZXRhJHNhbXBsZV9pZF0pCmBgYApTaXRlcyB3aXRoIGxlc3MgdGhhbiAxMHggcmVhZCBjb3ZlcmFnZSBhcmUgZmlsdGVyZWQgb3V0LiAgCk9ubHkgc2l0ZXMgd2l0aGluIENwRyBjb250ZXh0IHRoYXQgYXJlIGNvdmVyZWQgaW4gYWxsIHNhbXBsZXMgYXJlIHJldGFpbmVkIGZvciBzdWJzZXF1ZW50IGFuYWx5c2VzLgpgYGB7ciByYXdfbWV0aCwgY2FjaGU9RkFMU0V9CmxpYnJhcnkodGlkeXZlcnNlKQpsaWJyYXJ5KG1ldGh5bEtpdCkKCnJhd19tZXRoIDwtIG1ldGhSZWFkKGNvdmZpbGVzLAogICAgICAgICAgIHNhbXBsZS5pZD1hcy5saXN0KG5hbWVzKGNvdmZpbGVzKSksCiAgICAgICAgICAgYXNzZW1ibHk9Im1tMTAucDYiLAogICAgICAgICAgIHRyZWF0bWVudD1tZXRhJHRyZWF0bWVudCwKICAgICAgICAgICBjb250ZXh0PSJDcEciLAogICAgICAgICAgIHBpcGVsaW5lPSdiaXNtYXJrQ292ZXJhZ2UnLAogICAgICAgICAgIG1pbmNvdiA9IDEwCiAgICAgICAgICAgKSAlPiUKICBmaWx0ZXJCeUNvdmVyYWdlKGxvLmNvdW50PTEwLCBsby5wZXJjPU5VTEwsIGhpLmNvdW50PU5VTEwsIGhpLnBlcmM9OTkuOSkKYGBgCgpgYGB7ciBhbGxNZXRoLCBjYWNoZT1GQUxTRX0KI3Jhd19tZXRoIDwtIHJlYWRSRFMoIm91dHB1dC9SUkJTLzFfUHJvY2Vzc2luZ19RQy9yYXdfbWV0aC5SRFMiKQp1bml0ZWRfbWV0aCA8LSAgbWV0aHlsS2l0Ojp1bml0ZShyYXdfbWV0aCwgZGVzdHJhbmQ9RkFMU0UpCmBgYAoKQ2FsY3VsYXRpbmcgcGVyY2VudCBtZXRoeWxhdGlvbiBwZXIgc2l0ZSBwZXIgc2FtcGxlIChzYW1wbGVzIHggc2l0ZXMgbWF0cml4KS4KYGBge3IgcGVyYy5tZXRofQpzaXRlX21ldGggPC0gdChwZXJjTWV0aHlsYXRpb24odW5pdGVkX21ldGgpKQojIEFkZGluZyBwb3NpdGlvbnMgYXMgY29sdW1uIG5hbWVzOgpjb2xuYW1lcyhzaXRlX21ldGgpIDwtIHBhc3RlKHVuaXRlZF9tZXRoJGNociwgdW5pdGVkX21ldGgkc3RhcnQsIHNlcD0iXyIpCmBgYAoKIyMgUUM6IE1ldGh5bGF0aW9uIGRpc3RyaWJ1dGlvbiBhbmQgcmVhZCBjb3ZlcmFnZSB7LnRhYnNldCAudGFic2V0LWZhZGUgLnRhYnNldC1waWxsc30KRGlzdHJpYnV0aW9ucyBhcmUgbGFyZ2VseSB0aGUgc2FtZSBmb3IgYWxsIHNhbXBsZXMuICAKVGhlIHZhc3QgbWFqb3JpdHkgb2Ygc2l0ZXMgaGF2ZSBlaXRoZXIgMCUgb3IgMTAwJSBtZXRoeWxhdGlvbiwgd2hpY2ggaXMgd2hhdCB3ZSB3YW50LiAgCkNvdmVyYWdlIGlzIGhpZ2hseSByaWdodC1za2V3ZWQsIHdoaWNoIHRlbGxzIHVzIHRoYXQgd2UgZG9uJ3QgbmVlZCB0byB3b3JyeSBhYm91dCBQQ1IgZHVwbGljYXRpb24gYmlhcy4gQSBiaWFzIHdvdWxkIGhhdmUgYmVlbiBpbmRpY2F0ZWQgYXMgYW4gYWRkaXRpb25hbCBwZWFrIG9uIHRoZSByaWdodC4KYGBge3IsIHFjLCByZXN1bHRzPSdhc2lzJywgb3V0LndpZHRoPWMoJzUwJScsICc1MCUnKSwgY2FjaGU9VFJVRX0KZm9yKGkgaW4gMTpucm93KG1ldGEpKXsKICBjYXQoIiMjIyAiLCBwYXN0ZShtZXRhJHNhbXBsZV9pZFtpXSwgbWV0YSRnZW5vdHlwZVtpXSwgbWV0YSRzZXhbaV0sIG1ldGEkYWdlW2ldLCBzZXA9Il8iKSwiXG4iKQogIGNhdChnZXRNZXRoeWxhdGlvblN0YXRzKHJhd19tZXRoW1tpXV0sIHBsb3Q9VFJVRSwgYm90aC5zdHJhbmRzPUZBTFNFKSkKICBjYXQoZ2V0Q292ZXJhZ2VTdGF0cyhyYXdfbWV0aFtbaV1dLCBwbG90PVRSVUUsIGJvdGguc3RyYW5kcz1GQUxTRSkpCiAgY2F0KCdcblxuJykKfQpybShyYXdfbWV0aCkKYGBgCgojIyBPdXRwdXQKU2F2aW5nIG1ldGh5bGF0aW9uIG9iamVjdHMgZm9yIHN1YnNlcXVlbnQgYW5hbHlzZXMuCmBgYHtyIG91dHB1dH0Kc2F2ZVJEUyh1bml0ZWRfbWV0aCwgZmlsZT0ib3V0cHV0L1JSQlMvMV9Qcm9jZXNzaW5nX1FDL3VuaXRlZF9tZXRoLlJEUyIpCnNhdmVSRFMoc2l0ZV9tZXRoLCBmaWxlPSJvdXRwdXQvUlJCUy8xX1Byb2Nlc3NpbmdfUUMvcGVyc2l0ZV9tZXRoLlJEUyIpCndyaXRlX2NzdihkYXRhLmZyYW1lKHNpdGVfbWV0aCksIGZpbGU9Im91dHB1dC9SUkJTLzFfUHJvY2Vzc2luZ19RQy9SUkJTX3BlcnNpdGVfbWV0aC5jc3YiKQpgYGAKClVwbG9hZGluZyB0byBbU3luYXBzZV0oaHR0cHM6Ly93d3cuc3luYXBzZS5vcmcvIyFTeW5hcHNlOnN5bjI1MTc0NDg2KSBwZXJjZW50IG1ldGh5bGF0aW9uIHBlciBzaXRlIGFzIGNzdiBmaWxlIGFuZCB0aGUgcmF3IG1ldGh5bEtpdCBvYmplY3QgKGZpdGVyZWQgYW5kIG1lcmdlZCkuCmBgYHtyIHN5bmFwc2UsIHJlc3VsdHM9J2hpZGUnfQpzeW5Mb2dpbigpIAoKZmlsZSA8LSBGaWxlKCJvdXRwdXQvUlJCUy8xX1Byb2Nlc3NpbmdfUUMvdW5pdGVkX21ldGguUkRTIiwKICAgICAgICAgICAgIGNvbnRlbnRUeXBlID0gInRleHQvcGxhaW4iLAogICAgICAgICAgICAgZGVzY3JpcHRpb24gPSAiUlJCUyByYXcgbWV0aHlsS2l0OyBmaWx0ZXJlZCBmb3IgY292ZXJhZ2UgeDEwIGFuZCBpbmNsdWRpbmcgb25seSBzaXRlcyB0aGF0IGFyZSBjb3ZlcmVkIGluIGFsbCBzYW1wbGVzIiwKICAgICAgICAgICAgIHBhcmVudCA9ICJzeW4yNTE3NDQ4NiIpCnByb3ZlbmFuY2UgPC0gQWN0aXZpdHkodXNlZCA9ICJzeW4yNTE3NDUxNyIsCiAgICAgICAgICAgICAgICAgICAgICAgZXhlY3V0ZWQgPSAiaHR0cHM6Ly9naXRodWIuY29tL1RoZUphY2tzb25MYWJvcmF0b3J5L01USEZSX0M2NjdUL2Jsb2IvbWFzdGVyL1JSQlNfMV9Qcm9jZXNzaW5nX1FDLlJtZCIpCmZpbGUgPC0gc3luU3RvcmUoZmlsZSwgYWN0aXZpdHk9cHJvdmVuYW5jZSkKCmZpbGUgPC0gRmlsZSgib3V0cHV0L1JSQlMvMV9Qcm9jZXNzaW5nX1FDL1JSQlNfcGVyc2l0ZV9tZXRoLmNzdiIsCiAgICAgICAgICAgICBjb250ZW50VHlwZSA9ICJ0ZXh0L3BsYWluIiwKICAgICAgICAgICAgIGRlc2NyaXB0aW9uID0gIlJSQlMgUGVyY2VudCBtZXRoeWxhdGlvbiBwZXIgc2l0ZSBwZXIgc2FtcGxlIiwKICAgICAgICAgICAgIHBhcmVudCA9ICJzeW4yNTE3NDQ4NiIpCnByb3ZlbmFuY2UgPC0gQWN0aXZpdHkodXNlZCA9ICJzeW4yNTE3NDUxNyIsCiAgICAgICAgICAgICAgICAgICAgICAgZXhlY3V0ZWQgPSAiaHR0cHM6Ly9naXRodWIuY29tL1RoZUphY2tzb25MYWJvcmF0b3J5L01USEZSX0M2NjdUL2Jsb2IvbWFzdGVyL1JSQlNfMV9Qcm9jZXNzaW5nX1FDLlJtZCIpCmZpbGUgPC0gc3luU3RvcmUoZmlsZSwgYWN0aXZpdHk9cHJvdmVuYW5jZSkKCmBgYAo=</div>
 
 
 </div>
@@ -877,6 +897,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
+  window.initializeSourceEmbed("RRBS_1_Processing_QC.Rmd");
   window.initializeCodeFolding("hide" === "show");
 });
 </script>
